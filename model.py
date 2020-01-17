@@ -2,12 +2,6 @@ from ntap.models import *
 
 
 class Multi(RNN):
-    def loss(self, tasks):
-        joint_loss = sum([self.vars[name] for name in self.vars if name.startswith("loss") and
-                          name[5:] in tasks])
-        joint_accuracy = sum([self.vars[name] for name in self.vars if name.startswith("accuracy") and
-                          name[9:] in tasks]) / tf.shape(tasks)[0]
-        return joint_loss, joint_accuracy
 
     def build(self, data):
         RNN.build(self, data)
@@ -17,7 +11,8 @@ class Multi(RNN):
                                          list(data.target_names.keys())], tf.float32)
         self.vars["accuracy"] = tf.convert_to_tensor([self.vars["accuracy-" + name] for name in
                                          list(data.target_names.keys())], tf.float32, )
-        self.vars["joint_loss"] = tf.gather(self.vars["loss"], self.vars["annotators"])
+        self.vars["joint_loss"] = tf.reduce_sum(tf.gather(self.vars["loss"], self.vars["annotators"]))
+        self.vars["joint_accuracy"] = tf.reduce_mean(tf.gather(self.vars["accuracy"], self.vars["annotators"]))
 
         #self.vars["joint_loss"], self.vars["joint_accuracy"] = \
         #    self.loss(self.vars["annotators"])
