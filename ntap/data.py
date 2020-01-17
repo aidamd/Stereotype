@@ -174,7 +174,7 @@ class Dataset:
         self.sequence_data = np.array(tokenized)
         self.num_sequences = len(tokenized)
         self.sequence_lengths = np.array(self.sequence_lengths, dtype=np.int32)
-        self.data = self.data.reset_index()
+
 
 
     def load_embedding(self, column, embedding_type='glove', embedding_path=None,
@@ -360,45 +360,6 @@ class Dataset:
             end = min(size, i + batch_size)
             yield (start, end)
 
-    def __high_batch_indices(self, size, batch_size):
-        mapping = self.data[list(self.target_names.keys())].replace(0, 1)
-        for name, group in mapping.groupby(list(self.target_names.keys())):
-            for i in range(0, group.shape[0], batch_size):
-                yield group.iloc[i: min(i + batch_size, group.shape[0]):].index
-
-    def high_batches(self, var_dict, batch_size, test, keep_ratio=None, idx=None):
-        feed_dict = dict()
-
-        if idx is None:
-            idx = [i for i in range(self.num_sequences)]
-
-        for sub_idx in self.__high_batch_indices(len(idx), batch_size):
-            for var_name in var_dict:
-                if var_name == 'word_inputs':
-                    feed_dict[var_dict[var_name]] = self.__add_padding(self.sequence_data[sub_idx])
-                if var_name == 'sequence_length':
-                    feed_dict[var_dict[var_name]] = self.sequence_lengths[sub_idx]
-                if var_name == "annotators":
-                    feed_dict[var_dict["annotators"]] = self.__annotators(sub_idx)
-                if test:
-                    feed_dict[var_dict['keep_ratio']] = 1.0
-                    continue  # no labels or loss weights
-                if var_name.startswith('target'):
-                    name = var_name.replace("target-", "")
-                    if name not in self.targets:
-                        raise ValueError("Target not in data: {}".format(name))
-                    feed_dict[var_dict[var_name]] = self.targets[name][sub_idx]
-                if var_name.startswith("weights"):
-                    name = var_name.replace("weights-", "")
-                    if name not in self.weights:
-                        raise ValueError("Weights not found in data")
-                    feed_dict[var_dict[var_name]] = np.array(self.weights[name])
-                if var_name == 'keep_ratio':
-                    if keep_ratio is None:
-                        raise ValueError("Keep Ratio for RNN Dropout not set")
-                    feed_dict[var_dict[var_name]] = keep_ratio
-            yield feed_dict
-
     def batches(self, var_dict, batch_size, test, keep_ratio=None, idx=None):
         feed_dict = dict()
 
@@ -431,21 +392,6 @@ class Dataset:
                         raise ValueError("Keep Ratio for RNN Dropout not set")
                     feed_dict[var_dict[var_name]] = keep_ratio
             yield feed_dict
-
-    def __annotators(self, batch):
-        """
-        _batch_anno = list()
-        for _b in batch:
-            _anno = list()
-            for _target in self.target_names.keys():
-                if self.targets[_target][_b] != 2:
-                    _anno.append(_target)
-            _batch_anno.append(np.array(_anno))
-        return np.array(_batch_anno)
-        """
-        _b = batch[0]
-        _anno = [int(_target) for _target in self.target_names.keys() if self.targets[_target][_b] != 2]
-        return np.array(_anno)
 
     def __add_padding(self, batch):
         pad_idx = self.mapping["<PAD>"]

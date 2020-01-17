@@ -1,11 +1,11 @@
 import sys
 sys.path.append('.')
 
-from ntap.data import Dataset
 from model import *
+from data import *
 
 def initialize_dataset(data_dir):
-    data = Dataset(data_dir)
+    data = MultiData(data_dir)
     data.set_params(vocab_size=10000,
                     mallet_path = "/home/aida/Data/mallet/mallet-2.0.8/bin/mallet",
                     glove_path = "/Users/aidadavani/Desktop/glove.6B.300d.txt")
