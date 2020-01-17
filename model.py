@@ -11,8 +11,14 @@ class Multi(RNN):
 
     def build(self, data):
         RNN.build(self, data)
-        #self.vars["annotators"] = tf.placeholder(tf.string, shape=[None],
-        #                                          name="Annotators")
+        self.vars["annotators"] = tf.placeholder(tf.string, shape=[None],
+                                                 name="Annotators")
+        self.vars["loss"] = tf.Variable([self.vars["loss-" + name] for name in
+                                         list(data.target_names.keys())])
+        self.vars["accuracy"] = tf.Variable([self.vars["accuracy-" + name] for name in
+                                         list(data.target_names.keys())])
+        self.vars["joint_loss"] = tf.gather(self.vars["loss"], self.vars["annotators"])
+        
         #self.vars["joint_loss"], self.vars["joint_accuracy"] = \
         #    self.loss(self.vars["annotators"])
 

@@ -78,14 +78,14 @@ def aggregate():
         annotations[row["Tweet ID"]][row["Username"]] = row["Hate"]
         annotations[row["Tweet ID"]]["text"] = row["Text"]
 
-    anno_df = {user: list() for user in annotators}
+    anno_df = {i: list() for i, user in enumerate(annotators)}
     anno_df["id"] = list()
     anno_df["text"] = list()
 
     for key, val in annotations.items():
         anno_df["id"].append(key)
         anno_df["text"].append(val["text"])
-        for annotator in annotators:
+        for annotator, i in enumerate(annotators):
             if annotator in val.keys():
                 anno_df[annotator].append(val[annotator])
             else:
