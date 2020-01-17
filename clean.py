@@ -69,10 +69,29 @@ def get_hate():
     df.to_csv("annotations_maj.csv", index=False)
 
 def aggregate():
-    df = pd.read_csv("annotaions_maj.csv")
+    df = pd.read_csv("annotations_maj.csv")
     docs = set(df["Tweet ID"])
-    iat = pd.read_csv("IAT.csv")
-    
+    annotators = set(df["Username"])
+    annotations = {doc: dict() for doc in docs}
+
+    for i, row in df.iterrows():
+        annotations[row["Tweet ID"]][row["Username"]] = row["Hate"]
+        annotations[row["Tweet ID"]]["text"] = row["Text"]
+
+    anno_df = {user: list() for user in annotators}
+    anno_df["id"] = list()
+    anno_df["text"] = list()
+
+    for key, val in annotations.items():
+        anno_df["id"].append(key)
+        anno_df["text"].append(val["text"])
+        for annotator in annotators:
+            if annotator in val.keys():
+                anno_df[annotator].append(val[annotator])
+            else:
+                anno_df[annotator].append(2)
+
+    pd.DataFrame.from_dict(anno_df).to_csv("posts.csv", index=False)
 
 if __name__ == "__main__":
     #read_raw()
