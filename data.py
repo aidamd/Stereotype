@@ -2,32 +2,6 @@ from ntap.data import *
 
 class MultiData(Dataset):
 
-    def __encode(self, column):
-        self.__truncate_count = 0
-        self.__pad_count = 0
-        self.__unk_count = 0
-        self.__token_count = 0
-        tokenized = [None for _ in range(len(self.data))]
-
-        self.sequence_lengths = list()
-
-        for i, (_, string) in enumerate(self.data[column].iteritems()):
-            tokens = self.__tokenize_doc(string)
-            self.sequence_lengths.append(len(tokens))
-            tokenized[i] = self.__encode_doc(tokens)
-
-        # self.max_len = max(self.sequence_lengths)
-
-        print("Encoded {} docs".format(len(tokenized)))
-        print("{} tokens lost to truncation".format(self.__truncate_count))
-        # print("{} padding tokens added".format(self.__pad_count))
-        print("{:.3%} tokens covered by vocabulary of size {}".format(
-            (self.__token_count - self.__unk_count) / self.__token_count, len(self.vocab)))
-        self.sequence_data = np.array(tokenized)
-        self.num_sequences = len(tokenized)
-        self.sequence_lengths = np.array(self.sequence_lengths, dtype=np.int32)
-        self.data = self.data.reset_index()
-
     def __annotators(self, batch):
         _b = batch[0]
         _anno = [int(_target) for _target in self.target_names.keys() if self.targets[_target][_b] != 2]
@@ -39,7 +13,7 @@ class MultiData(Dataset):
             for i in range(0, group.shape[0], batch_size):
                 yield group.iloc[i: min(i + batch_size, group.shape[0]):].index
 
-    def high_batches(self, var_dict, batch_size, test, keep_ratio=None, idx=None):
+    def batches(self, var_dict, batch_size, test, keep_ratio=None, idx=None):
         feed_dict = dict()
 
         if idx is None:
@@ -48,7 +22,7 @@ class MultiData(Dataset):
         for sub_idx in self.__high_batch_indices(len(idx), batch_size):
             for var_name in var_dict:
                 if var_name == 'word_inputs':
-                    feed_dict[var_dict[var_name]] = self.__add_padding(self.sequence_data[sub_idx])
+                    feed_dict[var_dict[var_name]] = self._Dataset__add_padding(self.sequence_data[sub_idx])
                 if var_name == 'sequence_length':
                     feed_dict[var_dict[var_name]] = self.sequence_lengths[sub_idx]
                 if var_name == "annotators":

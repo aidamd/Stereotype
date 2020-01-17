@@ -174,6 +174,7 @@ class Dataset:
         self.sequence_data = np.array(tokenized)
         self.num_sequences = len(tokenized)
         self.sequence_lengths = np.array(self.sequence_lengths, dtype=np.int32)
+        self.data = self.data.reset_index()
 
 
 
