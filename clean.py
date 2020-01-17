@@ -85,11 +85,11 @@ def aggregate():
     for key, val in annotations.items():
         anno_df["id"].append(key)
         anno_df["text"].append(val["text"])
-        for annotator, i in enumerate(annotators):
+        for i, annotator in enumerate(annotators):
             if annotator in val.keys():
-                anno_df[annotator].append(val[annotator])
+                anno_df[i].append(val[annotator])
             else:
-                anno_df[annotator].append(2)
+                anno_df[i].append(2)
 
     pd.DataFrame.from_dict(anno_df).to_csv("posts.csv", index=False)
 

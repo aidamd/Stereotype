@@ -444,8 +444,7 @@ class Dataset:
         return np.array(_batch_anno)
         """
         _b = batch[0]
-        _anno = [_target for _target in self.target_names.keys() if self.targets[_target][_b] != 2]
-        print(len(_anno))
+        _anno = [int(_target) for _target in self.target_names.keys() if self.targets[_target][_b] != 2]
         return np.array(_anno)
 
     def __add_padding(self, batch):
