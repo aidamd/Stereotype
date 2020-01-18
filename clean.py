@@ -4,8 +4,6 @@ from collections import Counter
 
 def wonky_parser(fn, cols):
     txt = open(fn).read()
-    #                          This is where I specified 12 tabs
-    #                                       V
     preparse = re.findall('(([^\t]*\t[^\t]*){' + str(cols) + '}(\n|\Z))', txt)
     parsed = [t[0].replace("\n", "").split('\t') for t in preparse]
     return pd.DataFrame(parsed[1:], columns=parsed[0])

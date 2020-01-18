@@ -8,7 +8,7 @@ def initialize_dataset(data_dir):
     data = MultiData(data_dir)
     data.set_params(vocab_size=10000,
                     mallet_path = "/home/aida/Data/mallet/mallet-2.0.8/bin/mallet",
-                    glove_path = "/Users/aidadavani/Desktop/glove.6B.300d.txt")
+                    glove_path = "/home/aida/Data/word_embeddings/GloVe/glove.840B.300d.txt")
     data.clean("text")
     return data
 
@@ -25,7 +25,7 @@ def initialize_model(data):
     return model
 
 def train_model(model, data):
-    result = model.CV(data, num_epochs=10, num_folds=10)
+    result = model.CV(data, num_epochs=20, num_folds=10)
     result.summary()
     #model.train(data, num_epochs=10, model_path="save/model")
 

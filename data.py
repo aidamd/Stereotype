@@ -2,13 +2,21 @@ from ntap.data import *
 
 class MultiData(Dataset):
 
+    def encode_targets(self, columns, var_type='categorical', normalize=None,
+                       encoding='one-hot', reset=False):
+        Dataset.encode_targets(self, columns, encoding='labels')
+        length = len([x for x in self.targets[columns] if x != 2])
+        self.weights[columns] = [(length - sum(self.targets[columns] == name)) /
+                           length for name in [0, 1]]
+        self.weights[columns].append(0)
+
     def __annotators(self, batch):
         _b = batch[0]
         _anno = [int(_target) for _target in self.target_names.keys() if self.targets[_target][_b] != 2]
         return np.array(_anno)
 
-    def __high_batch_indices(self, size, batch_size):
-        mapping = self.data[list(self.target_names.keys())].replace(0, 1)
+    def __high_batch_indices(self, idx, batch_size):
+        mapping = self.data.iloc[idx][list(self.target_names.keys())].replace(0, 1)
         for name, group in mapping.groupby(list(self.target_names.keys())):
             for i in range(0, group.shape[0], batch_size):
                 yield group.iloc[i: min(i + batch_size, group.shape[0]):].index
@@ -19,7 +27,7 @@ class MultiData(Dataset):
         if idx is None:
             idx = [i for i in range(self.num_sequences)]
 
-        for sub_idx in self.__high_batch_indices(len(idx), batch_size):
+        for sub_idx in self.__high_batch_indices(idx, batch_size):
             for var_name in var_dict:
                 if var_name == 'word_inputs':
                     feed_dict[var_dict[var_name]] = self._Dataset__add_padding(self.sequence_data[sub_idx])
