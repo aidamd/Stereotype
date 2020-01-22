@@ -13,16 +13,22 @@ def initialize_dataset(data_dir):
     data.clean("text")
     return data
 
-def initialize_model(data):
+def initialize_model(data, mode):
     annotators = data.data.columns.tolist()
     annotators.remove("id")
     annotators.remove("text")
     dv = "+".join(a for a in annotators)
 
-    model = Annotator(dv + " ~ seq(text)",
-            rnn_dropout=0.2, hidden_size=100, cell="biGRU",
-            embedding_source="glove", data=data, optimizer='adam',
-            learning_rate=0.0001)
+    if mode == "annotator":
+        model = Annotator(dv + " ~ seq(text)",
+                rnn_dropout=0.2, hidden_size=100, cell="biGRU",
+                embedding_source="glove", data=data, optimizer='adam',
+                learning_rate=0.0001)
+    else:
+        model = AnnotatorInfo(dv + " ~ seq(text)",
+                          rnn_dropout=0.2, hidden_size=100, cell="biGRU",
+                          embedding_source="glove", data=data, optimizer='adam',
+                          learning_rate=0.0001)
     return model
 
 def train_model(model, data):
@@ -35,8 +41,5 @@ if __name__== '__main__':
 
     args = parser.parse_args()
     data = initialize_dataset("data/posts.csv")
-    if args.model == "annotator":
-        model = initialize_model(data)
-        train_model(model, data)
-    elif args.model == "posts":
-        model = initialize_model()
+    model = initialize_model(data, mode)
+    train_model(model, data)

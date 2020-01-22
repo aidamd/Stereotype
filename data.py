@@ -3,6 +3,27 @@ from ntap.data import *
 
 class MultiData(Dataset):
 
+    def __init__(self, source, demo_path=None, glove_path=None, mallet_path=None, tokenizer='wordpunct', vocab_size=5000,
+            embed='glove', min_token=5, stopwords=None, stem=False,
+            lower=True, max_len=512, include_nums=False,
+            include_symbols=False, num_topics=100, lda_max_iter=500):
+
+        Dataset.__init__(self, source, glove_path, mallet_path, tokenizer, vocab_size,
+            embed, min_token, stopwords, stem,
+            lower, max_len, include_nums,
+            include_symbols, num_topics, lda_max_iter)
+        if demo_path:
+            self.__read_demo(demo_path)
+
+
+    def __read_demo(self, demo_path):
+        demo_df = pd.read_csv
+        cols = demo_df.columns
+        cols.remove("annotator")
+        self.demo = dict()
+        for i, row in demo_df.iterrows():
+            self.demo[row["annotator"]] = [row[col] for col in cols]
+
     def encode_targets(self, columns, var_type='categorical', normalize=None,
                        encoding='one-hot', reset=False):
         Dataset.encode_targets(self, columns, encoding='labels')
@@ -36,6 +57,8 @@ class MultiData(Dataset):
                     feed_dict[var_dict[var_name]] = self.sequence_lengths[sub_idx]
                 if var_name == "annotators":
                     feed_dict[var_dict["annotators"]] = self.__annotators(sub_idx)
+                if var_name.startswith("demo"):
+                    feed_dict[var_dict[var_name]] = self.demo[var_name.replace("demo-", "")]
                 if test:
                     feed_dict[var_dict['keep_ratio']] = 1.0
                     continue  # no labels or loss weights

@@ -47,8 +47,27 @@ class Annotator(RNN):
             stats.append(stat)
         return stats
 
-class AnnotatorInfo(RNN):
+class AnnotatorInfo(Annotator):
 
 
-    def build(self):
-
+    def build(self, data):
+        Annotator.build(self, data)
+        for target in data.targets:
+            n_outputs = len(data.target_names[target])
+            self.vars["demo-{}".format(target)] = tf.placeholder(tf.int64,
+                    shape=[None], name="demo-{}".format(target))
+            tile_demo = tf.tile(tf.expand_dims(self.vars["demo-{}".format(target)], 0),
+                                [tf.shape(self.vars["hidden_states"])[0], 1])
+            self.vars["hidden-{}".format(target)] = tf.concat(self.vars["hidden_states"],
+                                                              tile_demo)
+            logits = tf.layers.dense("hidden-{}".format(target), n_outputs)
+            weight = tf.gather(self.vars["weights-{}".format(target)],
+                               self.vars["target-{}".format(target)])
+            xentropy = tf.losses.sparse_softmax_cross_entropy \
+                (labels=self.vars["target-{}".format(target)],
+                 logits=logits, weights=weight)
+            self.vars["loss-{}".format(target)] = tf.reduce_mean(xentropy)
+            self.vars["prediction-{}".format(target)] = tf.argmax(logits, 1)
+            self.vars["accuracy-{}".format(target)] = tf.reduce_mean(
+                tf.cast(tf.equal(self.vars["prediction-{}".format(target)],
+                                 self.vars["target-{}".format(target)]), tf.float32))
