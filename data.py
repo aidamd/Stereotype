@@ -1,5 +1,6 @@
 from ntap.data import *
 
+
 class MultiData(Dataset):
 
     def encode_targets(self, columns, var_type='categorical', normalize=None,

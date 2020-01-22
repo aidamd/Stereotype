@@ -1,7 +1,7 @@
 from ntap.models import *
 
 
-class Multi(RNN):
+class Annotator(RNN):
 
     def build(self, data):
         RNN.build(self, data)
@@ -46,3 +46,9 @@ class Multi(RNN):
                     stat[m] = cohen_kappa_score(y, y_hat)
             stats.append(stat)
         return stats
+
+class AnnotatorInfo(RNN):
+
+
+    def build(self):
+

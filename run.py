@@ -3,6 +3,7 @@ sys.path.append('.')
 
 from model import *
 from data import *
+import argparse
 
 def initialize_dataset(data_dir):
     data = MultiData(data_dir)
@@ -18,19 +19,24 @@ def initialize_model(data):
     annotators.remove("text")
     dv = "+".join(a for a in annotators)
 
-    model = Multi(dv + " ~ seq(text)",
+    model = Annotator(dv + " ~ seq(text)",
             rnn_dropout=0.2, hidden_size=100, cell="biGRU",
             embedding_source="glove", data=data, optimizer='adam',
             learning_rate=0.0001)
     return model
 
 def train_model(model, data):
-    result = model.CV(data, num_epochs=20, num_folds=10)
+    result = model.CV(data, num_epochs=15, num_folds=10)
     result.summary()
-    #model.train(data, num_epochs=10, model_path="save/model")
-
 
 if __name__== '__main__':
-    data = initialize_dataset("posts.csv")
-    model = initialize_model(data)
-    train_model(model, data)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode")
+
+    args = parser.parse_args()
+    data = initialize_dataset("data/posts.csv")
+    if args.model == "annotator":
+        model = initialize_model(data)
+        train_model(model, data)
+    elif args.model == "posts":
+        model = initialize_model()

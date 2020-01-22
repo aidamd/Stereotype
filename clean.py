@@ -1,7 +1,9 @@
 import re
 import pandas as pd
 from collections import Counter
+import json
 
+"""
 def wonky_parser(fn, cols):
     txt = open(fn).read()
     preparse = re.findall('(([^\t]*\t[^\t]*){' + str(cols) + '}(\n|\Z))', txt)
@@ -21,53 +23,59 @@ def read_raw():
         uniq = raw.drop_duplicates(subset=["Tweet ID", "Username"], keep="last")
         annotations = uniq[columns]
         annotations.to_csv("Annotations.csv", index=False, header=False, mode="a")
+"""
 
-def get_label():
+def get_label(data_path):
+    """
     df = pd.read_csv("annotations.csv")
     docs = set(df["Tweet ID"])
     annotations = {doc: {"annotations": dict(),
                          "label": ""} for doc in docs}
-    for i, row in df.iterrows():
-        annotations[row["Tweet ID"]]["annotations"][row["Username"]] = \
-            row["Foundation"].split(",")
+    """
+    annotations = json.load(open(data_path, "r"))
 
-    for doc in docs:
-        votes = Counter([a for an in annotations[doc]["annotations"].values()
-                         for a in an])
-        annotations[doc]["label"] = [vote for vote in votes.keys() if votes[vote] >
-                                     len(annotations[doc]["annotations"].keys()) / 2]
+    df = {"Tweet ID": list(),
+          "Text": list(),
+          "Username": list(),
+          "Foundation": list()}
+    for annotation in annotations:
+        if len(annotation["annotations"]) > 2:
+            for anno in annotation["annotations"]:
+                df["Text"].append(annotation["tweet_text"])
+                df["Tweet ID"].append(annotation["tweet_id"])
+                df["Username"].append(anno["annotator"])
+                df["Foundation"].append(anno["annotation"])
+    pd.DataFrame.from_dict(df).to_csv("Data/annotations.csv", index= False)
 
-    final = list()
-    for i, row in df.iterrows():
-        labels = annotations[row["Tweet ID"]]["label"]
-        final.append(",".join(l for l in labels))
-
-    df["Labels"] = pd.Series(final)
-    df.to_csv("annotations_maj.csv", index=False)
 
 def get_hate():
-    df = pd.read_csv("annotations_maj.csv")
+    df = pd.read_csv("Data/annotations.csv")
     hate, maj_hate = list(), list()
+    drop = list()
     for i, row in df.iterrows():
+        if row["Username"] == "Praveen":
+            drop.append(i)
         if isinstance(row["Foundation"], str) and \
                 ("cv" in row["Foundation"] or "hd" in row["Foundation"]):
             hate.append(1)
         else:
-            if "nh" not in row["Foundation"]:
-                print(row["Foundation"])
+            #if "nh" not in row["Foundation"]:
+            #    print(row["Foundation"])
             hate.append(0)
-
+        """
         if isinstance(row["Labels"], str) and \
                 ("cv" in row["Labels"] or "hd" in row["Labels"]):
             maj_hate.append(1)
         else:
             maj_hate.append(0)
+        """
     df["Hate"] = pd.Series(hate)
-    df["Maj_Hate"] = pd.Series(maj_hate)
-    df.to_csv("annotations_maj.csv", index=False)
+    #df["Maj_Hate"] = pd.Series(maj_hate)
+    df = df.drop(drop)
+    df.to_csv("Data/annotations_maj.csv", index=False)
 
 def aggregate():
-    df = pd.read_csv("annotations_maj.csv")
+    df = pd.read_csv("Data/annotations_maj.csv")
     docs = set(df["Tweet ID"])
     annotators = set(df["Username"])
     annotations = {doc: dict() for doc in docs}
@@ -79,20 +87,26 @@ def aggregate():
     anno_df = {i: list() for i, user in enumerate(annotators)}
     anno_df["id"] = list()
     anno_df["text"] = list()
+    anno_df["hate"] = list()
+    anno_df["agreement"] = list()
 
     for key, val in annotations.items():
         anno_df["id"].append(key)
         anno_df["text"].append(val["text"])
+        hate = {0: 0, 1: 0}
         for i, annotator in enumerate(annotators):
             if annotator in val.keys():
                 anno_df[i].append(val[annotator])
+                hate[val[annotator]] += 1
             else:
                 anno_df[i].append(2)
+        anno_df["hate"].append(1 if hate[1] > hate[0] else 0)
+        anno_df["agreement"].append(max(hate[0] / (hate[0] + hate[1]),
+                                   hate[1] / (hate[0] + hate[1])))
 
-    pd.DataFrame.from_dict(anno_df).to_csv("posts.csv", index=False)
+    pd.DataFrame.from_dict(anno_df).to_csv("Data/posts.csv", index=False)
 
 if __name__ == "__main__":
-    #read_raw()
-    #get_labe()
+    #get_label("/home/aida/Data/Gab/full_disaggregated.json")
     #get_hate()
     aggregate()
