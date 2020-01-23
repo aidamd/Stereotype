@@ -8,6 +8,8 @@ import argparse
 def initialize_dataset(mode):
     if mode == "annotator":
         data = MultiData("Data/posts.csv")
+    elif mode == "agree":
+        data = Dataset("Data/posts.csv")
     else:
         data = DemoData("Data/annotations_id.csv", demo_path="Data/IAT_clean.csv")
 
@@ -24,6 +26,11 @@ def initialize_model(data, mode):
         annotators.remove("text")
         dv = "+".join(a for a in annotators)
         model = Annotator(dv + " ~ seq(text)",
+                    rnn_dropout=0.2, hidden_size=100, cell="biGRU",
+                    embedding_source="glove", data=data, optimizer='adam',
+                    learning_rate=0.0001)
+    elif mode == "agree":
+        model = RNN("agreement ~ seq(text)",
                     rnn_dropout=0.2, hidden_size=100, cell="biGRU",
                     embedding_source="glove", data=data, optimizer='adam',
                     learning_rate=0.0001)

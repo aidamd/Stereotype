@@ -54,17 +54,14 @@ class AnnotatorDemo(RNN):
         RNN.build(self, data)
         self.vars["annotator"] = tf.placeholder(tf.int32, shape=[None], name="Annotator")
 
-        self.vars["demo"] = tf.placeholder(
-            tf.int32, shape=[None, None], name="Demo")
-
-        demo_W = tf.Variable(tf.constant(0.0, shape=[max(data.annotators) + 1, data.demo_dim]),
-                             trainable=False, name="Demo_Embed")
-        self.vars["Demo_Embedding"] = tf.nn.embedding_lookup(demo_W, self.vars["annotator"])
-
+        self.vars["demo"] = tf.placeholder(tf.int32, shape=[None, None], name="Demo")
         self.vars["DemoEmbeddingPlaceholder"] = tf.placeholder(tf.float32,
-                                                           shape=[max(data.annotators) + 1,
-                                                                  data.demo_dim])
-        self.vars["DemoEmbeddingInit"] = demo_W.assign(self.vars["DemoEmbeddingPlaceholder"])
+                                                               shape=[max(data.annotators) + 1,
+                                                                      data.demo_dim])
+
+        self.vars["Demo_Embedding"] = tf.nn.embedding_lookup(self.vars["DemoEmbeddingPlaceholder"],
+                                                             self.vars["annotator"])
+
         self.vars["hidden_demo"] = tf.concat([self.vars["hidden_states"],
                                             self.vars["Demo_Embedding"]], axis=-1)
 

@@ -102,8 +102,14 @@ def aggregate():
             else:
                 anno_df[i].append(2)
         anno_df["hate"].append(1 if hate[1] > hate[0] else 0)
-        anno_df["agreement"].append(max(hate[0] / (hate[0] + hate[1]),
-                                   hate[1] / (hate[0] + hate[1])))
+        agree = max(hate[0] / (hate[0] + hate[1]),
+                    hate[1] / (hate[0] + hate[1]))
+        if agree < 0.67:
+            anno_df["agreement"].append(0)
+        elif agree < 0.84:
+            anno_df["agreement"].append(1)
+        else:
+            anno_df["agreement"].append(2)
 
     annotator_dict = {annotator: i for i, annotator in enumerate(annotators)}
     print(annotator_dict)
@@ -111,7 +117,9 @@ def aggregate():
         df.at[i, "username"] = annotator_dict[row["username"]]
     json.dump(annotator_dict, open("annotators.json", "w"))
     df.to_csv("Data/annotations_id.csv", index=False)
-    pd.DataFrame.from_dict(anno_df).to_csv("Data/posts.csv", index=False)
+
+    posts = pd.DataFrame.from_dict(anno_df)
+    posts.to_csv("Data/posts.csv", index=False)
 
 def iat():
     df = pd.read_csv("Data/IAT.csv")
@@ -132,5 +140,5 @@ def iat():
 if __name__ == "__main__":
     #get_label("/home/aida/Data/Gab/full_disaggregated.json")
     #get_hate()
-    #aggregate()
-    iat()
+    aggregate()
+    #iat()
