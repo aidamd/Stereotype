@@ -6,7 +6,7 @@ class Annotator(RNN):
     def build(self, data):
         RNN.build(self, data)
 
-        self.vars["annotators"] = tf.placeholder(tf.int32, shape=[None],
+        self.vars["annotators"] = tf.placeholder(tf.int64, shape=[None],
                                                  name="Annotators")
 
         self.vars["loss"] = tf.convert_to_tensor([self.vars["loss-" + name] for name in
@@ -47,10 +47,43 @@ class Annotator(RNN):
             stats.append(stat)
         return stats
 
-class AnnotatorInfo(Annotator):
+class AnnotatorDemo(RNN):
 
 
     def build(self, data):
+        RNN.build(self, data)
+        self.vars["annotator"] = tf.placeholder(tf.int32, shape=[None], name="Annotator")
+
+        self.vars["demo"] = tf.placeholder(
+            tf.int32, shape=[None, None], name="Demo")
+
+        demo_W = tf.Variable(tf.constant(0.0, shape=[max(data.annotators) + 1, data.demo_dim]),
+                             trainable=False, name="Demo_Embed")
+        self.vars["Demo_Embedding"] = tf.nn.embedding_lookup(demo_W, self.vars["annotator"])
+
+        self.vars["DemoEmbeddingPlaceholder"] = tf.placeholder(tf.float32,
+                                                           shape=[max(data.annotators) + 1,
+                                                                  data.demo_dim])
+        self.vars["DemoEmbeddingInit"] = demo_W.assign(self.vars["DemoEmbeddingPlaceholder"])
+        self.vars["hidden_demo"] = tf.concat([self.vars["hidden_states"],
+                                            self.vars["Demo_Embedding"]], axis=-1)
+
+        for target in data.targets:
+            n_outputs = len(data.target_names[target])
+
+            logits = tf.layers.dense(self.vars["hidden_demo"], n_outputs)
+            weight = tf.gather(self.vars["weights-{}".format(target)],
+                               self.vars["target-{}".format(target)])
+            xentropy = tf.losses.sparse_softmax_cross_entropy \
+                (labels=self.vars["target-{}".format(target)],
+                 logits=logits, weights=weight)
+            self.vars["loss-{}".format(target)] = tf.reduce_mean(xentropy)
+            self.vars["prediction-{}".format(target)] = tf.argmax(logits, 1)
+            self.vars["accuracy-{}".format(target)] = tf.reduce_mean(
+                tf.cast(tf.equal(self.vars["prediction-{}".format(target)],
+                                 self.vars["target-{}".format(target)]), tf.float32))
+
+        """
         Annotator.build(self, data)
         for target in data.targets:
             n_outputs = len(data.target_names[target])
@@ -71,3 +104,4 @@ class AnnotatorInfo(Annotator):
             self.vars["accuracy-{}".format(target)] = tf.reduce_mean(
                 tf.cast(tf.equal(self.vars["prediction-{}".format(target)],
                                  self.vars["target-{}".format(target)]), tf.float32))
+        """

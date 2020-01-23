@@ -5,8 +5,12 @@ from model import *
 from data import *
 import argparse
 
-def initialize_dataset(data_dir):
-    data = MultiData(data_dir)
+def initialize_dataset(mode):
+    if mode == "annotator":
+        data = MultiData("Data/posts.csv")
+    else:
+        data = DemoData("Data/annotations_id.csv", demo_path="Data/IAT_clean.csv")
+
     data.set_params(vocab_size=10000,
                     mallet_path = "/home/aida/Data/mallet/mallet-2.0.8/bin/mallet",
                     glove_path = "/home/aida/Data/word_embeddings/GloVe/glove.840B.300d.txt")
@@ -14,18 +18,17 @@ def initialize_dataset(data_dir):
     return data
 
 def initialize_model(data, mode):
-    annotators = data.data.columns.tolist()
-    annotators.remove("id")
-    annotators.remove("text")
-    dv = "+".join(a for a in annotators)
-
     if mode == "annotator":
+        annotators = data.data.columns.tolist()
+        annotators.remove("id")
+        annotators.remove("text")
+        dv = "+".join(a for a in annotators)
         model = Annotator(dv + " ~ seq(text)",
-                rnn_dropout=0.2, hidden_size=100, cell="biGRU",
-                embedding_source="glove", data=data, optimizer='adam',
-                learning_rate=0.0001)
+                    rnn_dropout=0.2, hidden_size=100, cell="biGRU",
+                    embedding_source="glove", data=data, optimizer='adam',
+                    learning_rate=0.0001)
     else:
-        model = AnnotatorInfo(dv + " ~ seq(text)",
+        model = AnnotatorDemo("hate ~ seq(text)",
                           rnn_dropout=0.2, hidden_size=100, cell="biGRU",
                           embedding_source="glove", data=data, optimizer='adam',
                           learning_rate=0.0001)
@@ -40,6 +43,6 @@ if __name__== '__main__':
     parser.add_argument("--mode")
 
     args = parser.parse_args()
-    data = initialize_dataset("data/posts.csv")
-    model = initialize_model(data, mode)
+    data = initialize_dataset(args.mode)
+    model = initialize_model(data, args.mode)
     train_model(model, data)

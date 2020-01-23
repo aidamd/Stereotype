@@ -1,8 +1,7 @@
 from ntap.data import *
+import collections
 
-
-class MultiData(Dataset):
-
+class DemoData(Dataset):
     def __init__(self, source, demo_path=None, glove_path=None, mallet_path=None, tokenizer='wordpunct', vocab_size=5000,
             embed='glove', min_token=5, stopwords=None, stem=False,
             lower=True, max_len=512, include_nums=False,
@@ -17,12 +16,68 @@ class MultiData(Dataset):
 
 
     def __read_demo(self, demo_path):
-        demo_df = pd.read_csv
-        cols = demo_df.columns
-        cols.remove("annotator")
+        demo_df = pd.read_csv(demo_path)
+        cols = list(demo_df.columns)
+        cols.remove("Username")
         self.demo = dict()
+        self.demo_dim = len(cols)
+
         for i, row in demo_df.iterrows():
-            self.demo[row["annotator"]] = [row[col] for col in cols]
+            self.demo[row["Username"]] = np.array([row[col] for col in cols])
+
+        missing = np.random.randint(-3, 3, self.demo_dim)
+        self.annotators = list(self.demo.keys())
+
+        for i in range(max(self.annotators)):
+            if i not in self.demo.keys():
+                self.demo[i] = missing
+        self.demo = np.array([self.demo[i] for i in sorted(self.demo.keys())])
+
+
+    def batches(self, var_dict, batch_size, test, keep_ratio=None, idx=None):
+        feed_dict = dict()
+
+        if idx is None:
+            idx = [i for i in range(self.num_sequences)]
+
+        for (s, e) in self._Dataset__batch_indices(len(idx), batch_size):
+            for var_name in var_dict:
+                if var_name == 'word_inputs':
+                    feed_dict[var_dict[var_name]] = self._Dataset__add_padding(
+                        self.sequence_data[idx[s:e]])
+                if var_name == 'sequence_length':
+                    feed_dict[var_dict[var_name]] = self.sequence_lengths[idx[s:e]]
+                if var_name == "annotators":
+                    feed_dict[var_dict["annotators"]] = self._Dataset__annotators(idx[s:e])
+                if test:
+                    feed_dict[var_dict['keep_ratio']] = 1.0
+                    continue  # no labels or loss weights
+                if var_name.startswith('target'):
+                    name = var_name.replace("target-", "")
+                    if name not in self.targets:
+                        raise ValueError("Target not in data: {}".format(name))
+                    feed_dict[var_dict[var_name]] = self.targets[name][idx[s:e]]
+                if var_name.startswith("weights"):
+                    name = var_name.replace("weights-", "")
+                    if name not in self.weights:
+                        raise ValueError("Weights not found in data")
+                    feed_dict[var_dict[var_name]] = np.array(self.weights[name])
+                if var_name == 'keep_ratio':
+                    if keep_ratio is None:
+                        raise ValueError("Keep Ratio for RNN Dropout not set")
+                    feed_dict[var_dict[var_name]] = keep_ratio
+                if var_name == "annotator":
+                    feed_dict[var_dict[var_name]] = self.data["username"][idx[s:e]]
+                if var_name == "DemoEmbeddingPlaceholder":
+                    feed_dict[var_dict[var_name]] = self.demo
+            yield feed_dict
+
+
+
+
+class MultiData(Dataset):
+
+
 
     def encode_targets(self, columns, var_type='categorical', normalize=None,
                        encoding='one-hot', reset=False):
@@ -57,8 +112,6 @@ class MultiData(Dataset):
                     feed_dict[var_dict[var_name]] = self.sequence_lengths[sub_idx]
                 if var_name == "annotators":
                     feed_dict[var_dict["annotators"]] = self.__annotators(sub_idx)
-                if var_name.startswith("demo"):
-                    feed_dict[var_dict[var_name]] = self.demo[var_name.replace("demo-", "")]
                 if test:
                     feed_dict[var_dict['keep_ratio']] = 1.0
                     continue  # no labels or loss weights

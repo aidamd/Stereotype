@@ -76,13 +76,14 @@ def get_hate():
 
 def aggregate():
     df = pd.read_csv("Data/annotations_maj.csv")
-    docs = set(df["Tweet ID"])
-    annotators = set(df["Username"])
+    docs = set(df["tweet_id"])
+    annotators = list(set(df["username"]))
+    annotators.sort()
     annotations = {doc: dict() for doc in docs}
 
     for i, row in df.iterrows():
-        annotations[row["Tweet ID"]][row["Username"]] = row["Hate"]
-        annotations[row["Tweet ID"]]["text"] = row["Text"]
+        annotations[row["tweet_id"]][row["username"]] = row["hate"]
+        annotations[row["tweet_id"]]["text"] = row["text"]
 
     anno_df = {i: list() for i, user in enumerate(annotators)}
     anno_df["id"] = list()
@@ -104,9 +105,32 @@ def aggregate():
         anno_df["agreement"].append(max(hate[0] / (hate[0] + hate[1]),
                                    hate[1] / (hate[0] + hate[1])))
 
+    annotator_dict = {annotator: i for i, annotator in enumerate(annotators)}
+    print(annotator_dict)
+    for i, row in df.iterrows():
+        df.at[i, "username"] = annotator_dict[row["username"]]
+    json.dump(annotator_dict, open("annotators.json", "w"))
+    df.to_csv("Data/annotations_id.csv", index=False)
     pd.DataFrame.from_dict(anno_df).to_csv("Data/posts.csv", index=False)
+
+def iat():
+    df = pd.read_csv("Data/IAT.csv")
+    anno = json.load(open("annotators.json", "r"))
+    df = df.dropna(subset=["Username"])
+    drop = list()
+    for i, row in df.iterrows():
+        try:
+            df.at[i, "Username"] = anno[row["Username"]]
+        except Exception:
+            drop.append(i)
+    df = df.drop(drop)
+    df[["Username", "Race", "Gender-Career", "Sexuality", "Religion"]].\
+        to_csv("Data/IAT_clean.csv", index=False)
+
+
 
 if __name__ == "__main__":
     #get_label("/home/aida/Data/Gab/full_disaggregated.json")
     #get_hate()
-    aggregate()
+    #aggregate()
+    iat()
