@@ -11,6 +11,8 @@ class DemoData(Dataset):
             embed, min_token, stopwords, stem,
             lower, max_len, include_nums,
             include_symbols, num_topics, lda_max_iter)
+
+        self.annotators = sorted(set(self.data["username"]))
         if demo_path:
             self.__read_demo(demo_path)
 
@@ -49,6 +51,12 @@ class DemoData(Dataset):
                     feed_dict[var_dict[var_name]] = self.sequence_lengths[idx[s:e]]
                 if var_name == "annotators":
                     feed_dict[var_dict["annotators"]] = self._Dataset__annotators(idx[s:e])
+                if var_name == "annotator":
+                    feed_dict[var_dict[var_name]] = self.data["username"][idx[s:e]]
+                    feed_dict[var_dict["gather"]] = np.array([[anno, i] for i, anno in
+                    enumerate(feed_dict[var_dict[var_name]])])
+                if var_name == "DemoEmbeddingPlaceholder":
+                    feed_dict[var_dict[var_name]] = self.demo
                 if test:
                     feed_dict[var_dict['keep_ratio']] = 1.0
                     continue  # no labels or loss weights
@@ -66,10 +74,6 @@ class DemoData(Dataset):
                     if keep_ratio is None:
                         raise ValueError("Keep Ratio for RNN Dropout not set")
                     feed_dict[var_dict[var_name]] = keep_ratio
-                if var_name == "annotator":
-                    feed_dict[var_dict[var_name]] = self.data["username"][idx[s:e]]
-                if var_name == "DemoEmbeddingPlaceholder":
-                    feed_dict[var_dict[var_name]] = self.demo
             yield feed_dict
 
 
@@ -89,7 +93,8 @@ class MultiData(Dataset):
 
     def __annotators(self, batch):
         _b = batch[0]
-        _anno = [int(_target) for _target in self.target_names.keys() if self.targets[_target][_b] != 2]
+        _anno = [int(_target) for _target in self.target_names.keys()
+                 if re.match("[0-9]+", _target) and self.targets[_target][_b] != 2]
         return np.array(_anno)
 
     def __high_batch_indices(self, idx, batch_size):

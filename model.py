@@ -1,7 +1,52 @@
 from ntap.models import *
 
-
 class Annotator(RNN):
+
+    def build(self, data):
+        RNN.build(self, data)
+        self.vars["annotator"] = tf.placeholder(tf.int64, shape=[None],
+                                                 name="Annotator")
+        self.vars["gather"] = tf.placeholder(tf.int64, shape=[None, 2],
+                                             name= "Gather")
+        target = "hate"
+        for annotator in data.annotators:
+            n_outputs = 2
+            logits = tf.layers.dense(self.vars["hidden_states"], n_outputs)
+            weight = tf.gather(self.vars["weights-{}".format(target)],
+                               self.vars["target-{}".format(target)])
+            xentropy = tf.losses.sparse_softmax_cross_entropy\
+                (labels=self.vars["target-{}".format(target)],
+                    logits=logits, weights=weight)
+            self.vars["loss-{}".format(annotator)] = tf.reduce_mean(xentropy)
+            self.vars["predicted-{}".format(annotator)] = tf.argmax(logits, 1)
+            self.vars["accuracy-{}".format(annotator)] = tf.reduce_mean(
+                tf.cast(tf.equal(self.vars["predicted-{}".format(annotator)],
+                                 self.vars["target-{}".format(target)]), tf.float32))
+
+
+        self.vars["loss"] = tf.convert_to_tensor([
+            self.vars["loss-{}".format(annotator)] for annotator in data.annotators],
+            tf.float32)
+
+        self.vars["accuracy"] = tf.convert_to_tensor(
+            [self.vars["accuracy-{}".format(annotator)] for annotator in data.annotators],
+            tf.float32)
+
+        self.vars["prediction"] = tf.convert_to_tensor([
+            self.vars["predicted-{}".format(annotator)] for annotator in
+            data.annotators])
+
+        self.vars["prediction-hate"] = tf.reshape(tf.gather_nd(self.vars["prediction"],
+                                                           self.vars["gather"]), [-1])
+
+        self.vars["joint_loss"] = tf.reduce_sum(tf.gather(self.vars["loss"],
+                                                           self.vars["annotator"]))
+
+        self.vars["joint_accuracy"] = tf.reduce_mean(tf.gather(self.vars["accuracy"],
+                                                               self.vars["annotator"]))
+        self.init = tf.global_variables_initializer()
+
+class xAnnotator(RNN):
 
     def build(self, data):
         RNN.build(self, data)
@@ -22,6 +67,7 @@ class Annotator(RNN):
     def evaluate(self, predictions, labels, num_classes,
                  metrics=["f1", "accuracy", "precision", "recall", "kappa"]):
         stats = list()
+        all_y, all_y_hat = list(), list()
         for key in predictions:
             if not key.startswith("prediction-"):
                 continue
@@ -31,20 +77,21 @@ class Annotator(RNN):
             y, y_hat = labels[key], predictions[key]
             idx = [i for i in range(y.size) if y[i] != 2]
             y, y_hat = np.take(y, idx), np.take(y_hat, idx)
+            all_y.extend(y); all_y_hat.extend(y_hat)
             card = num_classes[key]
-            for m in metrics:
-                if m == 'accuracy':
-                    stat[m] = accuracy_score(y, y_hat)
-                avg = 'binary' if card == 2 else 'macro'
-                if m == 'precision':
-                    stat[m] = precision_score(y, y_hat, average=avg)
-                if m == 'recall':
-                    stat[m] = recall_score(y, y_hat, average=avg)
-                if m == 'f1':
-                    stat[m] = f1_score(y, y_hat, average=avg)
-                if m == 'kappa':
-                    stat[m] = cohen_kappa_score(y, y_hat)
-            stats.append(stat)
+        for m in metrics:
+            if m == 'accuracy':
+                stat[m] = accuracy_score(y, y_hat)
+            avg = 'binary' if card == 2 else 'macro'
+            if m == 'precision':
+                stat[m] = precision_score(y, y_hat, average=avg)
+            if m == 'recall':
+                stat[m] = recall_score(y, y_hat, average=avg)
+            if m == 'f1':
+                stat[m] = f1_score(y, y_hat, average=avg)
+            if m == 'kappa':
+                stat[m] = cohen_kappa_score(y, y_hat)
+        stats.append(stat)
         return stats
 
 class AnnotatorDemo(RNN):

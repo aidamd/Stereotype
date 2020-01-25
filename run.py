@@ -7,7 +7,7 @@ import argparse
 
 def initialize_dataset(mode):
     if mode == "annotator":
-        data = MultiData("Data/posts.csv")
+        data = DemoData("Data/annotations_id.csv")
     elif mode == "agree":
         data = Dataset("Data/posts.csv")
     else:
@@ -21,16 +21,12 @@ def initialize_dataset(mode):
 
 def initialize_model(data, mode):
     if mode == "annotator":
-        annotators = data.data.columns.tolist()
-        annotators.remove("id")
-        annotators.remove("text")
-        dv = "+".join(a for a in annotators)
-        model = Annotator(dv + " ~ seq(text)",
+        model = Annotator("hate ~ seq(text)",
                     rnn_dropout=0.2, hidden_size=100, cell="biGRU",
                     embedding_source="glove", data=data, optimizer='adam',
                     learning_rate=0.0001)
     elif mode == "agree":
-        model = RNN("agreement ~ seq(text)",
+        model = RNN("hate + agreement ~ seq(text)",
                     rnn_dropout=0.2, hidden_size=100, cell="biGRU",
                     embedding_source="glove", data=data, optimizer='adam',
                     learning_rate=0.0001)
@@ -42,7 +38,7 @@ def initialize_model(data, mode):
     return model
 
 def train_model(model, data):
-    result = model.CV(data, num_epochs=15, num_folds=10)
+    result = model.CV(data, num_epochs=10, num_folds=10)
     result.summary()
 
 if __name__== '__main__':
