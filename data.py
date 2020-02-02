@@ -139,8 +139,9 @@ class MultiData(Dataset):
     def __high_batch_indices(self, idx, batch_size):
         mapping = self.data.iloc[idx][list(self.target_names.keys())].replace(0, 1)
         for name, group in mapping.groupby(list(self.target_names.keys())):
-            for i in range(0, group.shape[0], batch_size):
-                yield group.iloc[i: min(i + batch_size, group.shape[0]):].index
+            if group.shape[0] > 100:
+                for i in range(0, group.shape[0], batch_size):
+                    yield group.iloc[i: min(i + batch_size, group.shape[0]):].index
 
     def batches(self, var_dict, batch_size, test, keep_ratio=None, idx=None):
         feed_dict = dict()
