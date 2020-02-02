@@ -61,16 +61,16 @@ class Model(ABC):
 
             self.train(data, num_epochs=num_epochs, train_indices=train_idx.tolist(),
                     test_indices=test_idx.tolist(), model_path=model_path, batch_size=batch_size)
-            y = self.predict(data, indices=test_idx.tolist(),
+            y, labels = self.predict(data, indices=test_idx.tolist(),
                     model_path=model_path, batch_size=batch_size)
-            labels = dict()
+            #labels = dict()
             num_classes = dict()
-            for key in y:
-                var_name = key.replace("prediction-", "")
-                test_y, card = data.get_labels(idx=test_idx, var=var_name)
-                labels[key] = test_y
-                num_classes[key] = card
-            stats = self.evaluate(y, labels, num_classes)  # both dict objects
+            #for key in y:
+            #    var_name = key.replace("prediction-", "")
+            #    test_y, card = data.get_labels(idx=test_idx, var=var_name)
+            #    labels[key] = test_y
+            #    num_classes[key] = card
+            stats = self.evaluate(y, labels, {key: 2 for key in y})  # both dict objects
             results.append(stats)
         return CV_Results(results)
         # param grid TODO
@@ -109,13 +109,16 @@ class Model(ABC):
         if model_path is None:
             raise ValueError("predict must be called with a valid model_path argument")
         fetch_vars = {v: self.vars[v] for v in self.vars if v.startswith("prediction-")}
+        target_vars = {v: self.vars[v] for v in self.vars if v.startswith("target-")}
         if len(retrieve) > 0:
             retrieve = [r for r in retrieve if r in self.list_model_vars()]
             for r in retrieve:
                 fetch_vars[r] = self.vars[r]
         fetch_vars = sorted(fetch_vars.items(), key=lambda x: x[0])
+        target_vars = sorted(target_vars.items(), key=lambda x: x[0])
 
         predictions = {k: list() for k,v in fetch_vars}
+        labels = {k: list() for k,v in target_vars}
         saver = tf.train.Saver()
         with tf.Session() as self.sess:
             try:
@@ -125,15 +128,18 @@ class Model(ABC):
             for i, feed in enumerate(new_data.batches(self.vars,
                 batch_size, idx=indices, test=True)):
                 prediction_vars = [v for k, v in fetch_vars]
+                #label_vars = [v for k, v in fetch_vars]
                 output = self.sess.run(prediction_vars, feed_dict=feed)
                 for i in range(len(output)):
                     var_name = fetch_vars[i][0]
+                    tar_name = target_vars[i][0]
                     outputs = output[i].tolist()
                     if var_name == "rnn_alphas":
                         lens = feed[self.vars["sequence_length"]]
                         outputs = [o[:l] for o, l in zip(outputs, lens)]
                     predictions[var_name] += outputs
-        return predictions
+                    labels[tar_name] += list(feed[target_vars[i][1]])
+        return predictions, labels
 
     def train(self, data, num_epochs=30, batch_size=256, train_indices=None,
               test_indices=None, model_path=None):
@@ -148,8 +154,8 @@ class Model(ABC):
                 for i, feed in enumerate(data.batches(self.vars,
                     batch_size, test=False, keep_ratio=self.rnn_dropout,
                     idx=train_indices)):
-                    #pred = self.sess.run([self.acc, self.vars["loss"]],
-                    #                     feed_dict=feed)
+                    pred = self.sess.run([self.vars["annotator-demo"], self.vars["loss"]],
+                                         feed_dict=feed)
                     _, loss_val, acc = self.sess.run([self.vars["training_op"],
                         self.vars["joint_loss"], self.vars["joint_accuracy"]],
                                                      feed_dict=feed)

@@ -159,14 +159,14 @@ class MultiData(Dataset):
                     feed_dict[var_dict["annotators"]] = self.__annotators(sub_idx)
                 if var_name == "DemoEmbeddingPlaceholder":
                     feed_dict[var_dict[var_name]] = self.demo
-                if test:
-                    feed_dict[var_dict['keep_ratio']] = 1.0
-                    continue  # no labels or loss weights
                 if var_name.startswith('target'):
                     name = var_name.replace("target-", "")
                     if name not in self.targets:
                         raise ValueError("Target not in data: {}".format(name))
                     feed_dict[var_dict[var_name]] = self.targets[name][sub_idx]
+                if test:
+                    feed_dict[var_dict['keep_ratio']] = 1.0
+                    continue  # no labels or loss weights
                 if var_name.startswith("weights"):
                     name = var_name.replace("weights-", "")
                     if name not in self.weights:

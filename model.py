@@ -200,12 +200,13 @@ class xAnnotatorDemo(RNN):
         stats = list()
         all_y, all_y_hat = list(), list()
         for key in predictions:
+            target_key = key.replace("prediction-", "target-")
             if not key.startswith("prediction-"):
                 continue
-            if key not in labels:
+            if target_key not in labels:
                 raise ValueError("Predictions and Labels have different keys")
             stat = {"Target": key.replace("prediction-", "")}
-            y, y_hat = labels[key], predictions[key]
+            y, y_hat = labels[target_key], predictions[key]
             idx = [i for i in range(y.size) if y[i] != 2]
             y, y_hat = np.take(y, idx), np.take(y_hat, idx)
             all_y.extend(y); all_y_hat.extend(y_hat)
