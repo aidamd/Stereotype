@@ -194,3 +194,33 @@ class xAnnotatorDemo(RNN):
         self.acc = tf.gather(self.vars["accuracy"], self.vars["annotators"])
         self.vars["joint_accuracy"] = tf.reduce_mean(self.acc)
         self.init = tf.global_variables_initializer()
+
+    def evaluate(self, predictions, labels, num_classes,
+                 metrics=["f1", "accuracy", "precision", "recall", "kappa"]):
+        stats = list()
+        all_y, all_y_hat = list(), list()
+        for key in predictions:
+            if not key.startswith("prediction-"):
+                continue
+            if key not in labels:
+                raise ValueError("Predictions and Labels have different keys")
+            stat = {"Target": key.replace("prediction-", "")}
+            y, y_hat = labels[key], predictions[key]
+            idx = [i for i in range(y.size) if y[i] != 2]
+            y, y_hat = np.take(y, idx), np.take(y_hat, idx)
+            all_y.extend(y); all_y_hat.extend(y_hat)
+            card = num_classes[key]
+        for m in metrics:
+            if m == 'accuracy':
+                stat[m] = accuracy_score(y, y_hat)
+            avg = 'binary' if card == 2 else 'macro'
+            if m == 'precision':
+                stat[m] = precision_score(y, y_hat, average=avg)
+            if m == 'recall':
+                stat[m] = recall_score(y, y_hat, average=avg)
+            if m == 'f1':
+                stat[m] = f1_score(y, y_hat, average=avg)
+            if m == 'kappa':
+                stat[m] = cohen_kappa_score(y, y_hat)
+        stats.append(stat)
+        return stats
