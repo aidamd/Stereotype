@@ -85,7 +85,7 @@ class Dataset:
             self = source.copy()
             return
         try:
-            self.data = read_file(source)
+            self.data = read_file(source).sample(frac=1)
         except Exception as e:
             print("Exception:", e)
             return

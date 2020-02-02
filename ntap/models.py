@@ -62,7 +62,7 @@ class Model(ABC):
             self.train(data, num_epochs=num_epochs, train_indices=train_idx.tolist(),
                     test_indices=test_idx.tolist(), model_path=model_path, batch_size=batch_size)
             y = self.predict(data, indices=test_idx.tolist(),
-                    model_path=model_path)
+                    model_path=model_path, batch_size=batch_size)
             labels = dict()
             num_classes = dict()
             for key in y:
@@ -148,6 +148,8 @@ class Model(ABC):
                 for i, feed in enumerate(data.batches(self.vars,
                     batch_size, test=False, keep_ratio=self.rnn_dropout,
                     idx=train_indices)):
+                    #pred = self.sess.run([self.acc, self.vars["loss"]],
+                    #                     feed_dict=feed)
                     _, loss_val, acc = self.sess.run([self.vars["training_op"],
                         self.vars["joint_loss"], self.vars["joint_accuracy"]],
                                                      feed_dict=feed)
@@ -273,7 +275,7 @@ class RNN(Model):
                     shape=[None], name="target-{}".format(target))
             self.vars["weights-{}".format(target)] = tf.placeholder(tf.float32,
                     shape=[n_outputs], name="weights-{}".format(target))
-            logits = tf.layers.dense(self.vars["hidden_states"], n_outputs)
+            logits = tf.layers.dense(tf.layers.dropout(self.vars["hidden_states"], rate = self.vars["keep_ratio"]), n_outputs)
             weight = tf.gather(self.vars["weights-{}".format(target)],
                                self.vars["target-{}".format(target)])
             xentropy = tf.losses.sparse_softmax_cross_entropy\

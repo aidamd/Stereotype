@@ -122,7 +122,7 @@ def aggregate():
     posts.to_csv("Data/posts.csv", index=False)
 
 def iat():
-    df = pd.read_csv("Data/IAT.csv")
+    df = pd.read_csv("Data/demo.csv")
     anno = json.load(open("annotators.json", "r"))
     df = df.dropna(subset=["Username"])
     drop = list()
@@ -132,13 +132,88 @@ def iat():
         except Exception:
             drop.append(i)
     df = df.drop(drop)
-    df[["Username", "Race", "Gender-Career", "Sexuality", "Religion"]].\
-        to_csv("Data/IAT_clean.csv", index=False)
+    cols = ["Username", "Race", "Gender-Career", "Sexuality", "Religion",
+        "negative_belief", "offender_punishment", "deterrence", "victim_harm"]
+    iat = pd.DataFrame()
+    cols.remove("Username")
+    for col in cols:
+        mean = (df[col].max + df[col].min()) / 2
+        iat[col] = (df[col] - mean) / (df[col].max() - df[col].min())
+    iat["Username"] = df["Username"]
+    iat.to_csv("Data/demo_clean.csv", index=False)
 
+def annotattor_demo():
+    df = pd.read_csv("Data/Annotators_demo.csv")
+    anno = {"Annotator ID": list(),
+            "negative_belief": list(),
+            "offender_punishment": list(),
+            "deterrence": list(),
+            "victim_harm": list(),
+            "political_view": list()}
+
+    for i, row in df.iterrows():
+        #if isinstance(row["Q17"], str):
+        try:
+            if int(row["Q17"]) > 0:
+                anno["Annotator ID"].append(int(row["Q17"]))
+            else:
+                continue
+        except Exception:
+            continue
+
+        b, o, d, v = 0, 0, 0, 0
+        b_count, o_count, d_count, v_count = 0, 0, 0, 0
+
+        for x in range(1, 17):
+            col = "Q89_" + str(x)
+            if isinstance(row[col], str):
+                b_count += 1
+                if x not in [13, 15, 16]:
+                    b += int(row[col])
+                else:
+                    b += (7 - int(row[col]))
+        anno["negative_belief"].append(b / b_count)
+
+        for x in range(17, 21):
+            col = "Q89_" + str(x)
+            if isinstance(row[col], str):
+                o_count += 1
+                o += int(row[col])
+        anno["offender_punishment"].append(o / o_count)
+
+        for x in range(21, 24):
+            col = "Q89_" + str(x)
+            if isinstance(row[col], str):
+                d_count += 1
+                d += int(row[col])
+        anno["deterrence"].append(d / d_count)
+
+        for x in range(24, 28):
+            col = "Q89_" + str(x)
+            if isinstance(row[col], str):
+                v_count += 1
+                v += int(row[col])
+        anno["victim_harm"].append(v / v_count)
+        anno["political_view"].append((int(row["Q24"]) + int(row["Q22.1"])) / 2)
+    anno = pd.DataFrame.from_dict(anno)
+    anno.to_csv("Data/annotators_hate.csv", index = False)
+    iat = pd.read_csv("Data/IAT.csv")
+    iat.merge(anno, on="Annotator ID").to_csv("Data/demo.csv", index=False)
+
+def stereotype():
+    keys = ["agency", "communion"]
+    str_dict = {k: list() for k in keys}
+    for k in keys:
+        lines = open("Data/" + k + "_temp.txt", "r").readlines()
+        words = [word.replace("\n", "") for word in lines if word != "\n"]
+        str_dict[k] = words
+    json.dump(str_dict, open("Data/stereo.json", "w"), indent=4)
 
 
 if __name__ == "__main__":
     #get_label("/home/aida/Data/Gab/full_disaggregated.json")
     #get_hate()
-    aggregate()
-    #iat()
+    #aggregate()
+    iat()
+    #annotattor_demo()
+    #stereotype()

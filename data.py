@@ -15,6 +15,7 @@ class DemoData(Dataset):
         self.annotators = sorted(set(self.data["username"]))
         if demo_path:
             self.__read_demo(demo_path)
+        self.data = self.data[self.data["username"].isin(self.annotators)]
 
 
     def __read_demo(self, demo_path):
@@ -28,7 +29,7 @@ class DemoData(Dataset):
             self.demo[row["Username"]] = np.array([row[col] for col in cols])
 
         missing = np.random.randint(-3, 3, self.demo_dim)
-        self.annotators = list(self.demo.keys())
+        self.annotators = [int(k) for k in self.demo.keys()]
 
         for i in range(max(self.annotators)):
             if i not in self.demo.keys():
@@ -53,8 +54,10 @@ class DemoData(Dataset):
                     feed_dict[var_dict["annotators"]] = self._Dataset__annotators(idx[s:e])
                 if var_name == "annotator":
                     feed_dict[var_dict[var_name]] = self.data["username"][idx[s:e]]
-                    feed_dict[var_dict["gather"]] = np.array([[anno, i] for i, anno in
-                    enumerate(feed_dict[var_dict[var_name]])])
+                if var_name == "gather":
+                    feed_dict[var_dict["gather"]] = np.array([[self.annotators.index(anno), i]
+                                                              for i, anno in
+                    enumerate(self.data["username"][idx[s:e]])])
                 if var_name == "DemoEmbeddingPlaceholder":
                     feed_dict[var_dict[var_name]] = self.demo
                 if test:
@@ -93,7 +96,8 @@ class MultiData(Dataset):
 
     def __annotators(self, batch):
         _b = batch[0]
-        _anno = [int(_target) for _target in self.target_names.keys()
+        _target_ids = {an: i for i, an in enumerate(self.target_names.keys())}
+        _anno = [_target_ids[_target] for _target in self.target_names.keys()
                  if re.match("[0-9]+", _target) and self.targets[_target][_b] != 2]
         return np.array(_anno)
 

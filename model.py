@@ -39,7 +39,7 @@ class Annotator(RNN):
         self.vars["prediction-hate"] = tf.reshape(tf.gather_nd(self.vars["prediction"],
                                                            self.vars["gather"]), [-1])
 
-        self.vars["joint_loss"] = tf.reduce_sum(tf.gather(self.vars["loss"],
+        self.vars["joint_loss"] = tf.reduce_mean(tf.gather(self.vars["loss"],
                                                            self.vars["annotator"]))
 
         self.vars["joint_accuracy"] = tf.reduce_mean(tf.gather(self.vars["accuracy"],
@@ -61,8 +61,8 @@ class xAnnotator(RNN):
 
         self.vars["joint_loss"] = tf.reduce_mean(tf.gather(self.vars["loss"],
                                                            self.vars["annotators"]))
-        self.vars["joint_accuracy"] = tf.reduce_mean(tf.gather(self.vars["accuracy"],
-                                                               self.vars["annotators"]))
+        self.acc = tf.gather(self.vars["accuracy"], self.vars["annotators"])
+        self.vars["joint_accuracy"] = tf.reduce_mean(self.acc)
 
     def evaluate(self, predictions, labels, num_classes,
                  metrics=["f1", "accuracy", "precision", "recall", "kappa"]):
@@ -126,6 +126,7 @@ class AnnotatorDemo(RNN):
             self.vars["accuracy-{}".format(target)] = tf.reduce_mean(
                 tf.cast(tf.equal(self.vars["prediction-{}".format(target)],
                                  self.vars["target-{}".format(target)]), tf.float32))
+        self.init = tf.global_variables_initializer()
 
         """
         Annotator.build(self, data)
