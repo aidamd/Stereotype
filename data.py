@@ -83,7 +83,42 @@ class DemoData(Dataset):
 
 
 class MultiData(Dataset):
+    def __init__(self, source, demo_path=None, glove_path=None, mallet_path=None,
+                 tokenizer='wordpunct', vocab_size=5000,
+            embed='glove', min_token=5, stopwords=None, stem=False,
+            lower=True, max_len=512, include_nums=False,
+            include_symbols=False, num_topics=100, lda_max_iter=500):
 
+        Dataset.__init__(self, source, glove_path, mallet_path, tokenizer, vocab_size,
+            embed, min_token, stopwords, stem,
+            lower, max_len, include_nums,
+            include_symbols, num_topics, lda_max_iter)
+
+        columns = list(self.data.columns)
+        columns.remove("text")
+        self.annotators = columns
+        if demo_path:
+            self.__read_demo(demo_path)
+        #self.data = self.data[self.data["username"].isin(self.annotators)]
+        print()
+
+    def __read_demo(self, demo_path):
+        demo_df = pd.read_csv(demo_path)
+        cols = list(demo_df.columns)
+        cols.remove("Username")
+        self.demo = dict()
+        self.demo_dim = len(cols)
+
+        for i, row in demo_df.iterrows():
+            self.demo[row["Username"]] = np.array([row[col] for col in cols])
+
+        missing = np.random.randint(-3, 3, self.demo_dim)
+        self.annotators = [int(k) for k in self.demo.keys()]
+
+        for i in range(max(self.annotators)):
+            if i not in self.demo.keys():
+                self.demo[i] = missing
+        self.demo = np.array([self.demo[i] for i in sorted(self.demo.keys())])
 
 
     def encode_targets(self, columns, var_type='categorical', normalize=None,
@@ -129,6 +164,8 @@ class MultiData(Dataset):
                     if name not in self.targets:
                         raise ValueError("Target not in data: {}".format(name))
                     feed_dict[var_dict[var_name]] = self.targets[name][sub_idx]
+                if var_name == "DemoEmbeddingPlaceholder":
+                    feed_dict[var_dict[var_name]] = self.demo
                 if var_name.startswith("weights"):
                     name = var_name.replace("weights-", "")
                     if name not in self.weights:
@@ -139,3 +176,4 @@ class MultiData(Dataset):
                         raise ValueError("Keep Ratio for RNN Dropout not set")
                     feed_dict[var_dict[var_name]] = keep_ratio
             yield feed_dict
+

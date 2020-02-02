@@ -12,11 +12,13 @@ def initialize_dataset(mode):
     elif mode == "agree":
         data = Dataset("Data/posts.csv")
     else:
-        data = DemoData("Data/annotations_id.csv", demo_path="Data/demo_clean.csv")
+        #data = DemoData("Data/annotations_id.csv", demo_path="Data/demo_clean.csv")
+        data = MultiData("Data/sub_posts.csv", demo_path="Data/demo_clean.csv")
+
 
     data.set_params(vocab_size=10000,
                     mallet_path = "/home/aida/Data/mallet/mallet-2.0.8/bin/mallet",
-                    glove_path = "/home/aida/Data/word_embeddings/GloVe/glove.840B.300d.txt")
+                    glove_path = "/Users/aidadavani/Desktop/glove.6B.300d.txt")
     data.clean("text")
     return data
 
@@ -41,10 +43,18 @@ def initialize_model(data, mode):
                     embedding_source="glove", data=data, optimizer='adam',
                     learning_rate=0.0001)
     else:
-        model = AnnotatorDemo("hate ~ seq(text)",
-                          rnn_dropout=0.5, hidden_size=50, cell="biGRU",
-                          embedding_source="glove", data=data, optimizer='adam',
-                          learning_rate=0.0005)
+        #model = AnnotatorDemo("hate ~ seq(text)",
+        #                  rnn_dropout=0.5, hidden_size=50, cell="biGRU",
+        #                  embedding_source="glove", data=data, optimizer='adam',
+        #                  learning_rate=0.0005)
+        cols = list(data.data.columns)
+        cols.remove("text")
+
+        iv = "+".join([str(x) for x in cols])
+        model = xAnnotatorDemo(iv + " ~ seq(text)",
+                    rnn_dropout=0.4, cell="biGRU",
+                    embedding_source="glove", data=data, optimizer='adam',
+                    learning_rate=0.0003, hidden_size=128)
     return model
 
 def train_model(model, data):
