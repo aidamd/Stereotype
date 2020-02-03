@@ -171,8 +171,9 @@ class xAnnotatorDemo(RNN):
             self.vars["annotator-demo"] = tf.nn.embedding_lookup(self.vars["DemoEmbeddingPlaceholder"],
                                                               self.anno_id)
 
-            self.vars["hidden-{}".format(target)] = tf.concat([self.vars["hidden_states"],
-                                                  self.vars["annotator-demo"]], axis=-1)
+            self.vars["hidden-{}".format(target)] = tf.layers.dropout(tf.concat([self.vars["hidden_states"],
+                                                  self.vars["annotator-demo"]], axis=-1),
+                                                                      rate = self.vars["keep_ratio"])
 
             logits = tf.layers.dense(self.vars["hidden-{}".format(target)], n_outputs)
             weight = tf.gather(self.vars["weights-{}".format(target)],
