@@ -154,8 +154,8 @@ class Model(ABC):
                 for i, feed in enumerate(data.batches(self.vars,
                     batch_size, test=False, keep_ratio=self.rnn_dropout,
                     idx=train_indices)):
-                    pred = self.sess.run([self.vars["annotator-demo"], self.vars["loss"]],
-                                         feed_dict=feed)
+                    #pred = self.sess.run([self.vars["annotator-demo"], self.vars["loss"]],
+                    #                     feed_dict=feed)
                     _, loss_val, acc = self.sess.run([self.vars["training_op"],
                         self.vars["joint_loss"], self.vars["joint_accuracy"]],
                                                      feed_dict=feed)
