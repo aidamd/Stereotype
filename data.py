@@ -66,7 +66,7 @@ class DemoData(Dataset):
                         raise ValueError("Target not in data: {}".format(name))
                     feed_dict[var_dict[var_name]] = self.targets[name][idx[s:e]]
                 if test:
-                    feed_dict[var_dict['keep_ratio']] = 1.0
+                    feed_dict[var_dict['keep_ratio']] = 0.0
                     continue  # no labels or loss weights
                 if var_name.startswith("weights"):
                     name = var_name.replace("weights-", "")
@@ -124,7 +124,7 @@ class AnnoData(Dataset):
                         raise ValueError("Target not in data: {}".format(name))
                     feed_dict[var_dict[var_name]] = self.targets[name][sub_idx]
                 if test:
-                    feed_dict[var_dict['keep_ratio']] = 1.0
+                    feed_dict[var_dict['keep_ratio']] = 0.0
                     continue  # no labels or loss weights
                 if var_name.startswith("weights"):
                     name = var_name.replace("weights-", "")
@@ -221,7 +221,7 @@ class MultiData(Dataset):
                         raise ValueError("Target not in data: {}".format(name))
                     feed_dict[var_dict[var_name]] = self.targets[name][sub_idx]
                 if test:
-                    feed_dict[var_dict['keep_ratio']] = 1.0
+                    feed_dict[var_dict['keep_ratio']] = 0.0
                     continue  # no labels or loss weights
                 if var_name.startswith("weights"):
                     name = var_name.replace("weights-", "")
