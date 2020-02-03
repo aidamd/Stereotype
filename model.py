@@ -36,11 +36,10 @@ class Annotator(RNN):
 
         self.vars["prediction-hate"] = tf.gather(self.vars["prediction"], self.vars["annotator"])
 
-        self.vars["joint_loss"] = tf.reduce_mean(tf.gather(self.vars["loss"],
-                                                           self.vars["annotator"]))
+        self.vars["joint_loss"] = tf.gather(self.vars["loss"], self.vars["annotator"])
 
-        self.vars["joint_accuracy"] = tf.reduce_mean(tf.gather(self.vars["accuracy"],
-                                                               self.vars["annotator"]))
+        self.vars["joint_accuracy"] = tf.gather(self.vars["accuracy"],
+                                                self.vars["annotator"])
         self.init = tf.global_variables_initializer()
 
 class xAnnotator(RNN):
