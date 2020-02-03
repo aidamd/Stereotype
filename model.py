@@ -40,6 +40,17 @@ class Annotator(RNN):
 
         self.vars["joint_accuracy"] = tf.gather(self.vars["accuracy"],
                                                 self.vars["annotator"])
+        if self.optimizer == 'adam':
+            opt = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+        elif self.optimizer == 'adagrad':
+            opt = tf.train.AdagradOptimizer(learning_rate=self.learning_rate)
+        elif self.optimizer == 'momentum':
+            opt = tf.train.MomentumOptimizer(learning_rate=self.learning_rate)
+        elif self.optimizer == 'rmsprop':
+            opt = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate)
+        else:
+            raise ValueError("Invalid optimizer specified")
+        self.vars["training_op"] = opt.minimize(loss=self.vars["joint_loss"])
         self.init = tf.global_variables_initializer()
 
 class xAnnotator(RNN):
