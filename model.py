@@ -79,8 +79,11 @@ class xAnnotator(RNN):
             idx = [i for i in range(len(y)) if y[i] != 2]
             sub_y, sub_y_hat = [lab for i, lab in enumerate(y) if i in idx], \
                                [lab for i, lab in enumerate(y_hat) if i in idx]
+            for i in range(len(sub_y)):
+                if y_hat[i] == 2:
+                    y_hat[i] = 1 - y[i]
             all_y.extend(sub_y); all_y_hat.extend(sub_y_hat)
-            card = num_classes[key]
+            card = 2
         for m in metrics:
             if m == 'accuracy':
                 stat[m] = accuracy_score(y, y_hat)
