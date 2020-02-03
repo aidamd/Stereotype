@@ -98,7 +98,7 @@ class AnnoData(Dataset):
 
     def __high_batch_indices(self, idx, batch_size):
         #mapping = self.data.iloc[idx][list(self.target_names.keys())].replace(0, 1)
-        for name, group in self.data.groupby("username"):
+        for name, group in self.data.iloc[idx].groupby("username"):
             for i in range(0, group.shape[0], batch_size):
                 yield group.iloc[i: min(i + batch_size, group.shape[0]):].index
 
@@ -107,8 +107,6 @@ class AnnoData(Dataset):
 
         if idx is None:
             idx = [i for i in range(self.num_sequences)]
-
-        batches = list()
 
         for sub_idx in self.__high_batch_indices(idx, batch_size):
             for var_name in var_dict:
@@ -137,10 +135,6 @@ class AnnoData(Dataset):
                     if keep_ratio is None:
                         raise ValueError("Keep Ratio for RNN Dropout not set")
                     feed_dict[var_dict[var_name]] = keep_ratio
-            batches.append(feed_dict)
-
-        random.shuffle(batches)
-        for feed_dict in batches:
             yield feed_dict
 
 
