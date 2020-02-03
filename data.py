@@ -92,12 +92,12 @@ class AnnoData(Dataset):
         self.annotators = sorted(set(self.data["username"]))
 
     def __annotators(self, batch):
-        _b = batch[0]["username"]
-        return self.annotators.index(_b)
+        _b = batch[0]
+        return self.annotators.index(self.data["username"][_b])
 
     def __high_batch_indices(self, idx, batch_size):
-        mapping = self.data.iloc[idx][list(self.target_names.keys())].replace(0, 1)
-        for name, group in mapping.groupby("username"):
+        #mapping = self.data.iloc[idx][list(self.target_names.keys())].replace(0, 1)
+        for name, group in self.data.groupby("username"):
             for i in range(0, group.shape[0], batch_size):
                 yield group.iloc[i: min(i + batch_size, group.shape[0]):].index
 

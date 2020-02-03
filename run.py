@@ -8,7 +8,7 @@ import argparse
 def initialize_dataset(mode):
     if mode == "annotator":
         #data = DemoData("Data/annotations_id.csv", demo_path="Data/demo_clean.csv")
-        data = DemoData("Data/sub_annotations.csv")
+        data = AnnoData("Data/sub_annotations.csv")
     else:
         data = DemoData("Data/sub_annotations.csv", demo_path="Data/demo_clean.csv")
         #data = MultiData("Data/sub_posts.csv", demo_path="Data/demo_clean.csv")
@@ -26,6 +26,7 @@ def initialize_model(data, mode):
         #            rnn_dropout=0.3, cell="biGRU",
         #            embedding_source="glove", data=data, optimizer='adam',
         #            learning_rate=0.07, hidden_size=128)
+        """
         cols = list(data.data.columns)
         cols.remove("text")
 
@@ -34,7 +35,12 @@ def initialize_model(data, mode):
                     rnn_dropout=0.4, cell="biGRU",
                     embedding_source="glove", data=data, optimizer='adam',
                     learning_rate=0.0003, hidden_size=128)
+        """
         # 10 epochs
+        model = Annotator("hate ~ seq(text)",
+                              rnn_dropout=0.5, hidden_size=50, cell="biGRU",
+                              embedding_source="glove", data=data, optimizer='adam',
+                              learning_rate=0.0005)
     else:
         model = AnnotatorDemo("hate ~ seq(text)",
                           rnn_dropout=0.5, hidden_size=50, cell="biGRU",
