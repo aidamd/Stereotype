@@ -1,5 +1,6 @@
 from ntap.data import *
 import collections
+import random
 
 class DemoData(Dataset):
     def __init__(self, source, demo_path=None, glove_path=None, mallet_path=None, tokenizer='wordpunct', vocab_size=5000,
@@ -107,6 +108,8 @@ class AnnoData(Dataset):
         if idx is None:
             idx = [i for i in range(self.num_sequences)]
 
+        batches = list()
+
         for sub_idx in self.__high_batch_indices(idx, batch_size):
             for var_name in var_dict:
                 if var_name == 'word_inputs':
@@ -134,6 +137,10 @@ class AnnoData(Dataset):
                     if keep_ratio is None:
                         raise ValueError("Keep Ratio for RNN Dropout not set")
                     feed_dict[var_dict[var_name]] = keep_ratio
+            batches.append(feed_dict)
+
+        random.shuffle(batches)
+        for feed_dict in batches:
             yield feed_dict
 
 
