@@ -97,18 +97,21 @@ class AnnoData(Dataset):
         return self.annotators.index(self.data["username"][_b])
 
     def __high_batch_indices(self, idx, batch_size):
-        #mapping = self.data.iloc[idx][list(self.target_names.keys())].replace(0, 1)
+        subsets = list()
         for name, group in self.data.iloc[idx].groupby("username"):
             for i in range(0, group.shape[0], batch_size):
-                yield group.iloc[i: min(i + batch_size, group.shape[0]):].index
+                subsets.append(group.iloc[i: min(i + batch_size, group.shape[0]):].index)
+        return subsets
 
     def batches(self, var_dict, batch_size, test, keep_ratio=None, idx=None):
-        feed_dict = dict()
+
+        batches = list()
 
         if idx is None:
             idx = [i for i in range(self.num_sequences)]
 
         for sub_idx in self.__high_batch_indices(idx, batch_size):
+            feed_dict = dict()
             for var_name in var_dict:
                 if var_name == 'word_inputs':
                     feed_dict[var_dict[var_name]] = self._Dataset__add_padding(self.sequence_data[sub_idx])
@@ -135,7 +138,9 @@ class AnnoData(Dataset):
                     if keep_ratio is None:
                         raise ValueError("Keep Ratio for RNN Dropout not set")
                     feed_dict[var_dict[var_name]] = keep_ratio
-            yield feed_dict
+            batches.append(feed_dict)
+        random.shuffle(batches)
+        return batches
 
 
 class MultiData(Dataset):
@@ -193,19 +198,21 @@ class MultiData(Dataset):
         return np.array(_anno)
 
     def __high_batch_indices(self, idx, batch_size):
+        subsets = list()
         mapping = self.data.iloc[idx][list(self.target_names.keys())].replace(0, 1)
         for name, group in mapping.groupby(list(self.target_names.keys())):
             if group.shape[0] > 100:
                 for i in range(0, group.shape[0], batch_size):
-                    yield group.iloc[i: min(i + batch_size, group.shape[0]):].index
+                    subsets.append(group.iloc[i: min(i + batch_size, group.shape[0]):].index)
+        return subsets
 
     def batches(self, var_dict, batch_size, test, keep_ratio=None, idx=None):
-        feed_dict = dict()
-
+        batches = list()
         if idx is None:
             idx = [i for i in range(self.num_sequences)]
 
         for sub_idx in self.__high_batch_indices(idx, batch_size):
+            feed_dict = dict()
             for var_name in var_dict:
                 if var_name == 'word_inputs':
                     feed_dict[var_dict[var_name]] = self._Dataset__add_padding(self.sequence_data[sub_idx])
@@ -232,5 +239,7 @@ class MultiData(Dataset):
                     if keep_ratio is None:
                         raise ValueError("Keep Ratio for RNN Dropout not set")
                     feed_dict[var_dict[var_name]] = keep_ratio
-            yield feed_dict
+            batches.append(feed_dict)
+
+        return batches
 
