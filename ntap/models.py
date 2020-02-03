@@ -70,7 +70,7 @@ class Model(ABC):
             #    test_y, card = data.get_labels(idx=test_idx, var=var_name)
             #    labels[key] = test_y
             #    num_classes[key] = card
-            stats = self.evaluate(y, labels, {key: 2 for key in y})  # both dict objects
+            stats = self.evaluate(y, labels, {key: 3 for key in y})  # both dict objects
             results.append(stats)
         return CV_Results(results)
         # param grid TODO
