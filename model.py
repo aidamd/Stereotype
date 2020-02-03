@@ -125,7 +125,7 @@ class AnnotatorDemo(RNN):
         #                                    self.vars["Demo_Embedding"]], axis=-1)
 
         self.vars["hidden_demo"] = tf.concat([self.vars["hidden_states"],
-                                              self.vars["annotator"]], axis=-1)
+                                              tf.expand_dims(tf.cast(self.vars["annotator"], tf.float32), 1)], axis=-1)
         for target in data.targets:
             n_outputs = 2
             logits = tf.layers.dense(tf.layers.dropout(self.vars["hidden_demo"],
