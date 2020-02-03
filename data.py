@@ -28,7 +28,7 @@ class DemoData(Dataset):
         for i, row in demo_df.iterrows():
             self.demo[row["Username"]] = np.array([row[col] for col in cols])
 
-        missing = np.random.randint(-3, 3, self.demo_dim)
+        missing = np.random.rand(0, 1, self.demo_dim)
         self.annotators = [int(k) for k in self.demo.keys()]
 
         for i in range(max(self.annotators)):

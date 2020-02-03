@@ -9,11 +9,9 @@ def initialize_dataset(mode):
     if mode == "annotator":
         #data = DemoData("Data/annotations_id.csv", demo_path="Data/demo_clean.csv")
         data = MultiData("Data/sub_posts.csv")
-    elif mode == "agree":
-        data = Dataset("Data/posts.csv")
     else:
-        #data = DemoData("Data/annotations_id.csv", demo_path="Data/demo_clean.csv")
-        data = MultiData("Data/sub_posts.csv", demo_path="Data/demo_clean.csv")
+        data = DemoData("Data/annotations_id.csv", demo_path="Data/demo_clean.csv")
+        #data = MultiData("Data/sub_posts.csv", demo_path="Data/demo_clean.csv")
 
 
     data.set_params(vocab_size=10000,
@@ -37,16 +35,12 @@ def initialize_model(data, mode):
                     embedding_source="glove", data=data, optimizer='adam',
                     learning_rate=0.0003, hidden_size=128)
         # 10 epochs
-    elif mode == "agree":
-        model = RNN("agreement ~ seq(text)",
-                    rnn_dropout=0.2, hidden_size=100, cell="biGRU",
-                    embedding_source="glove", data=data, optimizer='adam',
-                    learning_rate=0.0001)
     else:
-        #model = AnnotatorDemo("hate ~ seq(text)",
-        #                  rnn_dropout=0.5, hidden_size=50, cell="biGRU",
-        #                  embedding_source="glove", data=data, optimizer='adam',
-        #                  learning_rate=0.0005)
+        model = AnnotatorDemo("hate ~ seq(text)",
+                          rnn_dropout=0.5, hidden_size=50, cell="biGRU",
+                          embedding_source="glove", data=data, optimizer='adam',
+                          learning_rate=0.0005)
+        """
         cols = list(data.data.columns)
         cols.remove("text")
 
@@ -55,6 +49,7 @@ def initialize_model(data, mode):
                     rnn_dropout=0.4, cell="biGRU",
                     embedding_source="glove", data=data, optimizer='adam',
                     learning_rate=0.0003, hidden_size=128)
+        """
     return model
 
 def train_model(model, data):

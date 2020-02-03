@@ -23,7 +23,6 @@ class Annotator(RNN):
                 tf.cast(tf.equal(self.vars["predicted-{}".format(annotator)],
                                  self.vars["target-{}".format(target)]), tf.float32))
 
-
         self.vars["loss"] = tf.convert_to_tensor([
             self.vars["loss-{}".format(annotator)] for annotator in data.annotators],
             tf.float32)
@@ -118,9 +117,10 @@ class AnnotatorDemo(RNN):
                                             self.vars["Demo_Embedding"]], axis=-1)
 
         for target in data.targets:
-            n_outputs = len(data.target_names[target])
-
-            logits = tf.layers.dense(self.vars["hidden_demo"], n_outputs)
+            n_outputs = 2
+            logits = tf.layers.dense(tf.layers.dropout(self.vars["hidden_demo"],
+                                                       rate = self.vars["keep_ratio"]),
+                                                       n_outputs)
             weight = tf.gather(self.vars["weights-{}".format(target)],
                                self.vars["target-{}".format(target)])
             xentropy = tf.losses.sparse_softmax_cross_entropy \
