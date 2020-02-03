@@ -70,7 +70,7 @@ class Model(ABC):
             #    test_y, card = data.get_labels(idx=test_idx, var=var_name)
             #    labels[key] = test_y
             #    num_classes[key] = card
-            stats = self.evaluate(y, labels, {key: 3 for key in y})  # both dict objects
+            stats = self.evaluate(y, labels, {key: 2 for key in y})  # both dict objects
             results.append(stats)
         return CV_Results(results)
         # param grid TODO
@@ -79,12 +79,13 @@ class Model(ABC):
             metrics=["f1", "accuracy", "precision", "recall", "kappa"]):
         stats = list()
         for key in predictions:
+            target_key = key.replace("prediction-", "target-")
             if not key.startswith("prediction-"):
                 continue
-            if key not in labels:
+            if target_key not in labels:
                 raise ValueError("Predictions and Labels have different keys")
             stat = {"Target": key.replace("prediction-", "")}
-            y, y_hat = labels[key], predictions[key]
+            y, y_hat = labels[target_key], predictions[key]
             card = num_classes[key]
             for m in metrics:
                 if m == 'accuracy':

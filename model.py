@@ -34,8 +34,7 @@ class Annotator(RNN):
             self.vars["predicted-{}".format(annotator)] for annotator in
             data.annotators])
 
-        self.vars["prediction-hate"] = tf.reshape(tf.gather_nd(self.vars["prediction"],
-                                                           self.vars["gather"]), [-1])
+        self.vars["prediction-hate"] = tf.gather(self.vars["prediction"], self.vars["annotator"])
 
         self.vars["joint_loss"] = tf.reduce_mean(tf.gather(self.vars["loss"],
                                                            self.vars["annotator"]))
