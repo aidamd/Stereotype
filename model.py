@@ -4,10 +4,9 @@ class Annotator(RNN):
 
     def build(self, data):
         RNN.build(self, data)
-        self.vars["annotator"] = tf.placeholder(tf.int64, shape=[None],
-                                                 name="Annotator")
-        self.vars["gather"] = tf.placeholder(tf.int64, shape=[None, 2],
-                                             name= "Gather")
+        self.vars["annotator"] = tf.placeholder(tf.int64, name="Annotator")
+        #self.vars["gather"] = tf.placeholder(tf.int64, shape=[None, 2],
+        #                                     name= "Gather")
         target = "hate"
         for annotator in data.annotators:
             n_outputs = 2

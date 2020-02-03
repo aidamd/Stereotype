@@ -8,9 +8,9 @@ import argparse
 def initialize_dataset(mode):
     if mode == "annotator":
         #data = DemoData("Data/annotations_id.csv", demo_path="Data/demo_clean.csv")
-        data = MultiData("Data/sub_posts.csv")
+        data = DemoData("Data/sub_annotations.csv")
     else:
-        data = DemoData("Data/annotations_id.csv", demo_path="Data/demo_clean.csv")
+        data = DemoData("Data/sub_annotations.csv", demo_path="Data/demo_clean.csv")
         #data = MultiData("Data/sub_posts.csv", demo_path="Data/demo_clean.csv")
 
 
@@ -53,7 +53,7 @@ def initialize_model(data, mode):
     return model
 
 def train_model(model, data):
-    result = model.CV(data, num_epochs=10, num_folds=10, batch_size=512)
+    result = model.CV(data, num_epochs=1, num_folds=10, batch_size=512)
     result.summary()
 
 if __name__== '__main__':
