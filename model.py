@@ -69,15 +69,17 @@ class xAnnotator(RNN):
         stats = list()
         all_y, all_y_hat = list(), list()
         for key in predictions:
+            target_key = key.replace("prediction-", "target-")
             if not key.startswith("prediction-"):
                 continue
-            if key not in labels:
+            if target_key not in labels:
                 raise ValueError("Predictions and Labels have different keys")
             stat = {"Target": key.replace("prediction-", "")}
-            y, y_hat = labels[key], predictions[key]
-            idx = [i for i in range(y.size) if y[i] != 2]
-            y, y_hat = np.take(y, idx), np.take(y_hat, idx)
-            all_y.extend(y); all_y_hat.extend(y_hat)
+            y, y_hat = labels[target_key], predictions[key]
+            idx = [i for i in range(len(y)) if y[i] != 2]
+            sub_y, sub_y_hat = [lab for i, lab in enumerate(y) if i in idx], \
+                               [lab for i, lab in enumerate(y_hat) if i in idx]
+            all_y.extend(sub_y); all_y_hat.extend(sub_y_hat)
             card = num_classes[key]
         for m in metrics:
             if m == 'accuracy':
@@ -189,8 +191,9 @@ class xAnnotatorDemo(RNN):
         self.vars["accuracy"] = tf.convert_to_tensor([self.vars["accuracy-" + name] for name in
                                                       list(data.target_names.keys())], tf.float32, )
 
-        self.vars["joint_loss"] = tf.reduce_mean(tf.gather(self.vars["loss"],
-                                                           self.vars["annotators"]))
+        #self.vars["joint_loss"] = tf.reduce_mean(tf.gather(self.vars["loss"],
+        #                                                   self.vars["annotators"]))
+        self.vars["joint_loss"] = tf.reduce_mean(self.vars["loss"])
         self.acc = tf.gather(self.vars["accuracy"], self.vars["annotators"])
         self.vars["joint_accuracy"] = tf.reduce_mean(self.acc)
         self.init = tf.global_variables_initializer()
