@@ -208,8 +208,9 @@ class xAnnotatorDemo(RNN):
             stat = {"Target": key.replace("prediction-", "")}
             y, y_hat = labels[target_key], predictions[key]
             idx = [i for i in range(len(y)) if y[i] != 2]
-            y, y_hat = [i for i in y if i in idx], [i for i in y_hat if i in idx]
-            all_y.extend(y); all_y_hat.extend(y_hat)
+            sub_y, sub_y_hat = [lab for i, lab in enumerate(y) if i in idx], \
+                               [lab for i, lab in enumerate(y_hat) if i in idx]
+            all_y.extend(sub_y); all_y_hat.extend(sub_y_hat)
             card = num_classes[key]
         for m in metrics:
             if m == 'accuracy':
