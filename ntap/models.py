@@ -56,6 +56,8 @@ class Model(ABC):
         results = list()
         for i, (train_idx, test_idx) in enumerate(folder.split(X, y)):
             print("Conducting Fold #", i + 1)
+            print(test_idx[0])
+            #continue
             model_path = os.path.join(model_dir, str(i), "cv_model")
             self.cv_model_paths[i] = model_path
 
@@ -63,13 +65,13 @@ class Model(ABC):
                     test_indices=test_idx.tolist(), model_path=model_path, batch_size=batch_size)
             y, labels = self.predict(data, indices=test_idx.tolist(),
                     model_path=model_path, batch_size=batch_size)
-            #labels = dict()
+            labels = dict()
             num_classes = dict()
-            #for key in y:
-            #    var_name = key.replace("prediction-", "")
-            #    test_y, card = data.get_labels(idx=test_idx, var=var_name)
-            #    labels[key] = test_y
-            #    num_classes[key] = card
+            for key in y:
+                var_name = key.replace("prediction-", "")
+                test_y, card = data.get_labels(idx=test_idx, var=var_name)
+                labels[key] = test_y
+                num_classes[key] = card
             stats = self.evaluate(y, labels, {key: 2 for key in y})  # both dict objects
             results.append(stats)
         return CV_Results(results)
@@ -79,13 +81,15 @@ class Model(ABC):
             metrics=["f1", "accuracy", "precision", "recall", "kappa"]):
         stats = list()
         for key in predictions:
-            target_key = key.replace("prediction-", "target-")
+            #target_key = key.replace("prediction-", "target-")
             if not key.startswith("prediction-"):
                 continue
-            if target_key not in labels:
+            if key not in labels:
                 raise ValueError("Predictions and Labels have different keys")
             stat = {"Target": key.replace("prediction-", "")}
-            y, y_hat = labels[target_key], predictions[key]
+            y, y_hat = labels[key], predictions[key]
+            print("labels", sum(y))
+            print("predictions", sum(y_hat))
             card = num_classes[key]
             for m in metrics:
                 if m == 'accuracy':
@@ -100,6 +104,7 @@ class Model(ABC):
                 if m == 'kappa':
                     stat[m] = cohen_kappa_score(y, y_hat)
             stats.append(stat)
+            print(stat)
         return stats
 
     def predict(self, new_data, model_path, orig_data=None, column=None, indices=None, batch_size=256,

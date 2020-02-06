@@ -16,50 +16,26 @@ def initialize_dataset(mode):
 
     data.set_params(vocab_size=10000,
                     mallet_path = "/home/aida/Data/mallet/mallet-2.0.8/bin/mallet",
-                    glove_path = "/Users/aidadavani/Desktop/glove.6B.300d.txt")
+                    glove_path = "/home/aida/Data/word_embeddings/GloVe/glove.840B.300d.txt")
     data.clean("text")
     return data
 
 def initialize_model(data, mode):
     if mode == "annotator":
-        #model = Annotator("hate ~ seq(text)",
-        #            rnn_dropout=0.3, cell="biGRU",
-        #            embedding_source="glove", data=data, optimizer='adam',
-        #            learning_rate=0.07, hidden_size=128)
-        """
-        cols = list(data.data.columns)
-        cols.remove("text")
-
-        iv = "+".join([str(x) for x in cols])
-        model = xAnnotator(iv + " ~ seq(text)",
-                    rnn_dropout=0.4, cell="biGRU",
-                    embedding_source="glove", data=data, optimizer='adam',
-                    learning_rate=0.0003, hidden_size=128)
-        """
-        # 10 epochs
-        model = Annotator("hate ~ seq(text)",
-                              rnn_dropout=0.5, hidden_size=50, cell="biGRU",
+        model = AnnotatorDemo("hate ~ seq(text)",
+                              rnn_dropout=0.5, hidden_size=64, cell="biGRU",
                               embedding_source="glove", data=data, optimizer='adam',
                               learning_rate=0.0005)
     else:
         model = AnnotatorDemo("hate ~ seq(text)",
-                          rnn_dropout=0.5, hidden_size=50, cell="biGRU",
+                          rnn_dropout=0, hidden_size=64, cell="biGRU",
                           embedding_source="glove", data=data, optimizer='adam',
-                          learning_rate=0.0005)
-        """
-        cols = list(data.data.columns)
-        cols.remove("text")
+                          learning_rate=0.0001)
 
-        iv = "+".join([str(x) for x in cols])
-        model = xAnnotatorDemo(iv + " ~ seq(text)",
-                    rnn_dropout=0.4, cell="biGRU",
-                    embedding_source="glove", data=data, optimizer='adam',
-                    learning_rate=0.0003, hidden_size=128)
-        """
     return model
 
 def train_model(model, data):
-    result = model.CV(data, num_epochs=1, num_folds=10, batch_size=512)
+    result = model.CV(data, num_epochs=10, num_folds=5, batch_size=512)
     result.summary()
 
 if __name__== '__main__':

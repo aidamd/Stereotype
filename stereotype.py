@@ -15,7 +15,7 @@ def create_dictionary():
 
 
 
-    glove_file = datapath("/home/aida/Data/word_embeddings/GloVe/glove.6B.300d.txt")
+    glove_file = datapath("/home/aida/Data/word_embeddings/GloVe/glove.840B.300d.txt")
     tmp_file = get_tmpfile("glove.txt")
     _ = glove2word2vec(glove_file, tmp_file)
     model = KeyedVectors.load_word2vec_format(tmp_file)
@@ -51,12 +51,10 @@ def create_dictionary():
     pickle.dump(vecs, open("Data/dictionary.pkl", "wb"))
 
 def euclidean(x, y):
-    return np.linalg.norm(x - y)
-    # return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
+    #return np.linalg.norm(x - y)
+    return np.dot(x, y) / (np.linalg.norm(x) * np.linalg.norm(y))
 
 def differences():
-    SGTs = [x.replace("\n", "") for x in
-            open("../HateSpeech/extended_SGT.txt", "r").readlines()]
     groups = ["agency", "communion"]
     vecs = pickle.load(open("Data/dictionary.pkl", "rb"))
     distances = {"sgt": list(),
@@ -66,14 +64,18 @@ def differences():
         distances["sgt"].append(s)
         for group in groups:
             dis = [euclidean(vecs["SGT"][s], vecs[group][x]) for x in vecs[group].keys()]
-            distances[group].append(1 / (sum(dis) / len(dis)))
+            distances[group].append(sum(dis) / len(dis))
+            #avg = sum(list(vecs[group].values())) / len(vecs[group].values())
+            #distances[group].append(euclidean(avg, vecs["SGT"][s]))
+    #pd.DataFrame.from_dict(distances).to_csv("Data/sgt_stereotypes.csv", index=False)
     pd.DataFrame.from_dict(distances).to_csv("Data/sgt_stereotypes.csv", index=False)
 
 def join_sgt():
+    #stereo = pd.read_csv("Data/sgt_stereotypes.csv")
     stereo = pd.read_csv("Data/sgt_stereotypes.csv")
     fp = pd.read_csv("../HateSpeech/biased/fp_SGT.csv")
     fp.merge(stereo, right_on="sgt", left_on="Change")[["sgt", "Frequency", "agency", "communion"]]\
-        .to_csv("Data/study1.csv", index=False)
+        .to_csv("Data/study1_ddr.csv", index=False)
 
 def visualize():
     change = pd.read_csv("../HateSpeech/biased/fp_change.csv")
@@ -100,9 +102,9 @@ def visualize():
     pd.DataFrame.from_dict(lines).to_csv("Data/study1_changes.csv", index=False)
 
 if __name__ == "__main__":
-    #create_dictionary()
-    #differences()
-    #join_sgt()
-    visualize()
+    create_dictionary()
+    differences()
+    join_sgt()
+    #visualize()
 
 
