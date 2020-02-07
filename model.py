@@ -125,8 +125,6 @@ class AnnotatorDemo(RNN):
         self.vars["hidden_demo"] = tf.concat([self.vars["hidden_states"],
                                             tf.layers.dense(self.vars["Demo_Embedding"], 64)], axis=-1)
 
-        #self.vars["hidden_demo"] = tf.concat([self.vars["hidden_states"],
-        #                                      tf.expand_dims(tf.cast(self.vars["annotator"], tf.float32), 1)], axis=-1)
         for target in data.targets:
             n_outputs = 2
             logits = tf.layers.dense(tf.layers.dropout(self.vars["hidden_demo"],
@@ -165,34 +163,47 @@ class MultiModel(RNN):
                 self.vars["sequence_length"])
 
         if self.rnn_dropout is not None:
-            self.vars["hidden_states"] = tf.layers.dropout(self.vars["states"],
-                                                           rate=self.vars["keep_ratio"],
-                                                           name="RNNDropout")
+            self.vars["hidden_states"] = \
+                tf.layers.dropout(self.vars["states"],
+                                  rate=self.vars["keep_ratio"],
+                                  name="RNNDropout")
         else:
             self.vars["hidden_states"] = self.vars["states"]
 
-        self.vars["DemoEmbeddingPlaceholder"] = tf.placeholder(tf.float32,
-                                                               shape=[max(data.annotators) + 1,
-                                                                      data.demo_dim],
-                                                               name="DemoEmbedding")
+
+        self.vars["DemoEmbeddingPlaceholder"] = \
+            tf.placeholder(tf.float32, shape=[max(data.annotators) + 1, data.demo_dim],
+                           name="DemoEmbedding")
 
         for target in data.targets:
             n_outputs = 2
-            #self.anno_id = tf.tile(tf.convert_to_tensor([int(target)]),
-            #                  [tf.shape(self.vars["hidden_states"])[0]])
+            if data.demo is not None:
+                self.anno_id = tf.tile(tf.convert_to_tensor([int(target)]),
+                                  [tf.shape(self.vars["hidden_states"])[0]])
 
-            #self.vars["annotator-demo"] = tf.nn.embedding_lookup(self.vars["DemoEmbeddingPlaceholder"],
-            #                                                  self.anno_id)
+                self.vars["annotator-demo"] = \
+                    tf.nn.embedding_lookup(self.vars["DemoEmbeddingPlaceholder"],
+                                           self.anno_id)
 
-            #self.vars["hidden-{}".format(target)] = tf.layers.dropout(tf.concat([self.vars["hidden_states"],
-            #                                      self.vars["annotator-demo"]], axis=-1),
-            #                                                          rate = self.vars["keep_ratio"])
-            self.vars["target-{}".format(target)] = tf.placeholder(tf.int64,
-                                                                   shape=[None], name="target-{}".format(target))
-            self.vars["weights-{}".format(target)] = tf.placeholder(tf.float32,
-                                                                    shape=[n_outputs], name="weights-{}".format(target))
-            self.vars["mask-{}".format(target)] = tf.placeholder(tf.bool, shape=[None],
-                                                                 name="mask-{}".format(target))
+                self.vars["hidden-{}".format(target)] = \
+                    tf.layers.dropout(tf.concat([self.vars["hidden_states"],
+                                                 self.vars["annotator-demo"]], axis=-1),
+                                      rate = self.vars["keep_ratio"])
+            else:
+                self.vars["hidden-{}".format(target)] = self.vars["hidden_states"]
+
+            self.vars["target-{}".format(target)] = \
+                tf.placeholder(tf.int64, shape=[None],
+                               name="target-{}".format(target))
+
+            self.vars["weights-{}".format(target)] = \
+                tf.placeholder(tf.float32, shape=[n_outputs],
+                               name="weights-{}".format(target))
+
+            self.vars["mask-{}".format(target)] = \
+                tf.placeholder(tf.bool, shape=[None],
+                               name="mask-{}".format(target))
+
             logits = tf.layers.dense(self.vars["hidden_states"], n_outputs)
             self.labels = tf.boolean_mask(self.vars["target-{}".format(target)],
                                          self.vars["mask-{}".format(target)])
@@ -209,17 +220,12 @@ class MultiModel(RNN):
             self.vars["accuracy-{}".format(target)] = tf.reduce_mean(
                 tf.cast(tf.equal(self.vars["prediction-{}".format(target)],
                                  self.vars["target-{}".format(target)]), tf.float32))
+        self.vars["joint_loss"] = \
+            sum([self.vars[name] for name in self.vars if name.startswith("loss")])
 
-        #self.vars["loss"] = tf.convert_to_tensor([self.vars["loss-" + name] for name in
-        #                                          list(data.target_names.keys())], tf.float32)
-        #self.vars["accuracy"] = tf.convert_to_tensor([self.vars["accuracy-" + name] for name in
-        #                                              list(data.target_names.keys())], tf.float32, )
-
-        #self.vars["joint_loss"] = tf.reduce_mean(tf.gather(self.vars["loss"],
-        #                                                   self.vars["annotators"]))
-        self.vars["joint_loss"] = sum([self.vars[name] for name in self.vars if name.startswith("loss")])
-        self.vars["joint_accuracy"] = sum([self.vars[name] for name in self.vars if name.startswith("accuracy")]) \
-                                      / len([self.vars[name] for name in self.vars if name.startswith("accuracy")])
+        self.vars["joint_accuracy"] = \
+            sum([self.vars[name] for name in self.vars if name.startswith("accuracy")]) \
+            / len([self.vars[name] for name in self.vars if name.startswith("accuracy")])
 
         if self.optimizer == 'adam':
             opt = tf.train.AdamOptimizer(learning_rate=self.learning_rate)

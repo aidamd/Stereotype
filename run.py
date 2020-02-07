@@ -6,11 +6,8 @@ from data import *
 import argparse
 
 def initialize_dataset(mode):
-    if mode == "annotator":
-        data = DemoData("Data/sample.csv", demo_path="Data/demo_clean.csv")
-    else:
-        data = DemoData("Data/sample.csv", demo_path="Data/demo_clean.csv")
-
+    data = DemoData("Data/sample.csv",
+                    demo_path="Data/demo_clean.csv" if mode == "demo" else None)
 
     data.set_params(vocab_size=10000,
                     mallet_path = "/home/aida/Data/mallet/mallet-2.0.8/bin/mallet",
@@ -20,17 +17,10 @@ def initialize_dataset(mode):
 
 def initialize_model(data, mode):
     dv = "+".join([str(col) for col in data.annotators])
-    if mode == "annotator":
-        model = MultiModel(dv + " ~ seq(text)",
-                              rnn_dropout=0.5, hidden_size=64, cell="biGRU",
-                              embedding_source="glove", data=data, optimizer='adam',
-                              learning_rate=0.0005)
-    else:
-        model = MultiModel(dv + " ~ seq(text)",
-                          rnn_dropout=0, hidden_size=64, cell="biGRU",
+    model = MultiModel(dv + " ~ seq(text)",
+                          rnn_dropout=0.5, hidden_size=64, cell="biGRU",
                           embedding_source="glove", data=data, optimizer='adam',
-                          learning_rate=0.0001)
-
+                          learning_rate=0.0005)
     return model
 
 def train_model(model, data):
