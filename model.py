@@ -144,73 +144,94 @@ class AnnotatorDemo(RNN):
                                  self.vars["target-{}".format(target)]), tf.float32))
         self.init = tf.global_variables_initializer()
 
-        """
-        Annotator.build(self, data)
-        for target in data.targets:
-            n_outputs = len(data.target_names[target])
-            self.vars["demo-{}".format(target)] = tf.placeholder(tf.int64,
-                    shape=[None], name="demo-{}".format(target))
-            tile_demo = tf.tile(tf.expand_dims(self.vars["demo-{}".format(target)], 0),
-                                [tf.shape(self.vars["hidden_states"])[0], 1])
-            self.vars["hidden-{}".format(target)] = tf.concat(self.vars["hidden_states"],
-                                                              tile_demo)
-            logits = tf.layers.dense("hidden-{}".format(target), n_outputs)
-            weight = tf.gather(self.vars["weights-{}".format(target)],
-                               self.vars["target-{}".format(target)])
-            xentropy = tf.losses.sparse_softmax_cross_entropy \
-                (labels=self.vars["target-{}".format(target)],
-                 logits=logits, weights=weight)
-            self.vars["loss-{}".format(target)] = tf.reduce_mean(xentropy)
-            self.vars["prediction-{}".format(target)] = tf.argmax(logits, 1)
-            self.vars["accuracy-{}".format(target)] = tf.reduce_mean(
-                tf.cast(tf.equal(self.vars["prediction-{}".format(target)],
-                                 self.vars["target-{}".format(target)]), tf.float32))
-        """
 
-class xAnnotatorDemo(RNN):
+class MultiModel(RNN):
 
     def build(self, data):
-        RNN.build(self, data)
-        self.vars["annotators"] = tf.placeholder(tf.int64, shape=[None],
-                                                 name="Annotators")
+        tf.reset_default_graph()
+        self.vars["sequence_length"] = tf.placeholder(tf.int32, shape=[None],
+                name="SequenceLength")
+        self.vars["word_inputs"] = tf.placeholder(tf.int32, shape=[None, None],
+                                                  name="RNNInput")
+        self.vars["keep_ratio"] = tf.placeholder(tf.float32, name="KeepRatio")
+        W = tf.Variable(tf.constant(0.0, shape=[len(data.vocab), data.embed_dim]), trainable=False, name="Embed")
+        self.vars["Embedding"] = tf.layers.dropout(tf.nn.embedding_lookup(W,
+                self.vars["word_inputs"]), rate=self.vars["keep_ratio"], name="EmbDropout")
+        self.vars["EmbeddingPlaceholder"] = tf.placeholder(tf.float32,
+                shape=[len(data.vocab), data.embed_dim])
+        self.vars["EmbeddingInit"] = W.assign(self.vars["EmbeddingPlaceholder"])
+        self.vars["states"] = self._RNN__build_rnn(self.vars["Embedding"],
+                self.hidden_size, self.cell_type, self.bi,
+                self.vars["sequence_length"])
+
+        if self.rnn_dropout is not None:
+            self.vars["hidden_states"] = tf.layers.dropout(self.vars["states"],
+                                                           rate=self.vars["keep_ratio"],
+                                                           name="RNNDropout")
+        else:
+            self.vars["hidden_states"] = self.vars["states"]
+
         self.vars["DemoEmbeddingPlaceholder"] = tf.placeholder(tf.float32,
                                                                shape=[max(data.annotators) + 1,
-                                                                      data.demo_dim])
+                                                                      data.demo_dim],
+                                                               name="DemoEmbedding")
 
         for target in data.targets:
-            n_outputs = len(data.target_names[target])
-            self.anno_id = tf.tile(tf.convert_to_tensor([int(target)]),
-                              [tf.shape(self.vars["hidden_states"])[0]])
+            n_outputs = 2
+            #self.anno_id = tf.tile(tf.convert_to_tensor([int(target)]),
+            #                  [tf.shape(self.vars["hidden_states"])[0]])
 
-            self.vars["annotator-demo"] = tf.nn.embedding_lookup(self.vars["DemoEmbeddingPlaceholder"],
-                                                              self.anno_id)
+            #self.vars["annotator-demo"] = tf.nn.embedding_lookup(self.vars["DemoEmbeddingPlaceholder"],
+            #                                                  self.anno_id)
 
-            self.vars["hidden-{}".format(target)] = tf.layers.dropout(tf.concat([self.vars["hidden_states"],
-                                                  self.vars["annotator-demo"]], axis=-1),
-                                                                      rate = self.vars["keep_ratio"])
-
-            logits = tf.layers.dense(self.vars["hidden-{}".format(target)], n_outputs)
+            #self.vars["hidden-{}".format(target)] = tf.layers.dropout(tf.concat([self.vars["hidden_states"],
+            #                                      self.vars["annotator-demo"]], axis=-1),
+            #                                                          rate = self.vars["keep_ratio"])
+            self.vars["target-{}".format(target)] = tf.placeholder(tf.int64,
+                                                                   shape=[None], name="target-{}".format(target))
+            self.vars["weights-{}".format(target)] = tf.placeholder(tf.float32,
+                                                                    shape=[n_outputs], name="weights-{}".format(target))
+            self.vars["mask-{}".format(target)] = tf.placeholder(tf.bool, shape=[None],
+                                                                 name="mask-{}".format(target))
+            logits = tf.layers.dense(self.vars["hidden_states"], n_outputs)
+            self.labels = tf.boolean_mask(self.vars["target-{}".format(target)],
+                                         self.vars["mask-{}".format(target)])
             weight = tf.gather(self.vars["weights-{}".format(target)],
-                               self.vars["target-{}".format(target)])
+                               self.labels)
+            self.logits = tf.boolean_mask(logits, tf.cast(self.vars["mask-{}".format(target)],
+                                                 tf.float32))
             xentropy = tf.losses.sparse_softmax_cross_entropy \
-                (labels=self.vars["target-{}".format(target)],
-                 logits=logits, weights=weight)
+                (labels=self.labels,
+                 logits=self.logits,
+                 weights=weight)
             self.vars["loss-{}".format(target)] = tf.reduce_mean(xentropy)
             self.vars["prediction-{}".format(target)] = tf.argmax(logits, 1)
             self.vars["accuracy-{}".format(target)] = tf.reduce_mean(
                 tf.cast(tf.equal(self.vars["prediction-{}".format(target)],
                                  self.vars["target-{}".format(target)]), tf.float32))
 
-        self.vars["loss"] = tf.convert_to_tensor([self.vars["loss-" + name] for name in
-                                                  list(data.target_names.keys())], tf.float32)
-        self.vars["accuracy"] = tf.convert_to_tensor([self.vars["accuracy-" + name] for name in
-                                                      list(data.target_names.keys())], tf.float32, )
+        #self.vars["loss"] = tf.convert_to_tensor([self.vars["loss-" + name] for name in
+        #                                          list(data.target_names.keys())], tf.float32)
+        #self.vars["accuracy"] = tf.convert_to_tensor([self.vars["accuracy-" + name] for name in
+        #                                              list(data.target_names.keys())], tf.float32, )
 
         #self.vars["joint_loss"] = tf.reduce_mean(tf.gather(self.vars["loss"],
         #                                                   self.vars["annotators"]))
-        self.vars["joint_loss"] = tf.reduce_mean(self.vars["loss"])
-        self.acc = tf.gather(self.vars["accuracy"], self.vars["annotators"])
-        self.vars["joint_accuracy"] = tf.reduce_mean(self.acc)
+        self.vars["joint_loss"] = sum([self.vars[name] for name in self.vars if name.startswith("loss")])
+        self.vars["joint_accuracy"] = sum([self.vars[name] for name in self.vars if name.startswith("accuracy")]) \
+                                      / len([self.vars[name] for name in self.vars if name.startswith("accuracy")])
+
+        if self.optimizer == 'adam':
+            opt = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
+        elif self.optimizer == 'adagrad':
+            opt = tf.train.AdagradOptimizer(learning_rate=self.learning_rate)
+        elif self.optimizer == 'momentum':
+            opt = tf.train.MomentumOptimizer(learning_rate=self.learning_rate)
+        elif self.optimizer == 'rmsprop':
+            opt = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate)
+        else:
+            raise ValueError("Invalid optimizer specified")
+        self.vars["training_op"] = opt.minimize(loss=self.vars["joint_loss"])
         self.init = tf.global_variables_initializer()
 
     def evaluate(self, predictions, labels, num_classes,

@@ -7,27 +7,26 @@ import argparse
 
 def initialize_dataset(mode):
     if mode == "annotator":
-        #data = DemoData("Data/annotations_id.csv", demo_path="Data/demo_clean.csv")
-        data = AnnoData("Data/sub_annotations.csv")
+        data = DemoData("Data/sample.csv", demo_path="Data/demo_clean.csv")
     else:
-        data = DemoData("Data/sub_annotations.csv", demo_path="Data/demo_clean.csv")
-        #data = MultiData("Data/sub_posts.csv", demo_path="Data/demo_clean.csv")
+        data = DemoData("Data/sample.csv", demo_path="Data/demo_clean.csv")
 
 
     data.set_params(vocab_size=10000,
                     mallet_path = "/home/aida/Data/mallet/mallet-2.0.8/bin/mallet",
-                    glove_path = "/home/aida/Data/word_embeddings/GloVe/glove.840B.300d.txt")
+                    glove_path = "/Users/aidadavani/Desktop/glove.6B.300d.txt")
     data.clean("text")
     return data
 
 def initialize_model(data, mode):
+    dv = "+".join([str(col) for col in data.annotators])
     if mode == "annotator":
-        model = AnnotatorDemo("hate ~ seq(text)",
+        model = MultiModel(dv + " ~ seq(text)",
                               rnn_dropout=0.5, hidden_size=64, cell="biGRU",
                               embedding_source="glove", data=data, optimizer='adam',
                               learning_rate=0.0005)
     else:
-        model = AnnotatorDemo("hate ~ seq(text)",
+        model = MultiModel(dv + " ~ seq(text)",
                           rnn_dropout=0, hidden_size=64, cell="biGRU",
                           embedding_source="glove", data=data, optimizer='adam',
                           learning_rate=0.0001)

@@ -296,7 +296,7 @@ class Dataset:
         return np.array(encoded, dtype=np.int32)
 
     def encode_targets(self, columns, var_type='categorical', normalize=None,
-            encoding='one-hot', reset=False):
+            encoding='one-hot', reset=False, encode=True):
         if reset:
             self.data.targets = dict()
             self.data.target_names = dict()
@@ -323,13 +323,18 @@ class Dataset:
                 #self.weights[c] = {name: sum(self.targets[c] == name) for \
                         #name in self.target_names[c]}
             else:
-                enc = LabelEncoder()
-                X = self.data[c].values.tolist()
-                X_enc = enc.fit_transform(X)
-                self.target_names[c] = enc.classes_
-                self.targets[c] = X_enc
+                if encode:
+                    enc = LabelEncoder()
+                    X = self.data[c].values.tolist()
+                    X_enc = enc.fit_transform(X)
+                    self.target_names[c] = enc.classes_
+                    self.targets[c] = X_enc
+                else:
+                    self.targets[c] = self.data[c].values
+                    self.target_names[c] = list(set(self.data[c].values))
                 length = len(self.targets[c])
-                self.weights[c] = [(length - sum(self.targets[c] == name))/length for name in self.target_names[c]]
+                self.weights[c] = [(length - sum(self.targets[c] == name))/
+                                   length for name in self.target_names[c]]
 
     def encode_inputs(self, columns, var_type='categorical', normalize=None, encoding='one-hot'):
 
