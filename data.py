@@ -22,6 +22,8 @@ class DemoData(Dataset):
 
         if demo_path:
             self.__read_demo(demo_path)
+        else:
+            self.demo = None
         #self.data = self.data[self.data["username"].isin(self.annotators)]
 
 

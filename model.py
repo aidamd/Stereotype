@@ -170,10 +170,10 @@ class MultiModel(RNN):
         else:
             self.vars["hidden_states"] = self.vars["states"]
 
-
-        self.vars["DemoEmbeddingPlaceholder"] = \
-            tf.placeholder(tf.float32, shape=[max(data.annotators) + 1, data.demo_dim],
-                           name="DemoEmbedding")
+        if data.demo is not None:
+            self.vars["DemoEmbeddingPlaceholder"] = \
+                tf.placeholder(tf.float32, shape=[max(data.annotators) + 1, data.demo_dim],
+                               name="DemoEmbedding")
 
         for target in data.targets:
             n_outputs = 2
@@ -187,7 +187,9 @@ class MultiModel(RNN):
 
                 self.vars["hidden-{}".format(target)] = \
                     tf.layers.dropout(tf.concat([self.vars["hidden_states"],
-                                                 self.vars["annotator-demo"]], axis=-1),
+                                                 tf.layers.dense(
+                                                     self.vars["annotator-demo"],
+                                                     64)], axis=-1),
                                       rate = self.vars["keep_ratio"])
             else:
                 self.vars["hidden-{}".format(target)] = self.vars["hidden_states"]
@@ -245,29 +247,29 @@ class MultiModel(RNN):
         stats = list()
         all_y, all_y_hat = list(), list()
         for key in predictions:
-            target_key = key.replace("prediction-", "target-")
+            #target_key = key.replace("prediction-", "target-")
             if not key.startswith("prediction-"):
                 continue
-            if target_key not in labels:
+            if key not in labels:
                 raise ValueError("Predictions and Labels have different keys")
             stat = {"Target": key.replace("prediction-", "")}
-            y, y_hat = labels[target_key], predictions[key]
-            idx = [i for i in range(len(y)) if y[i] != 2]
+            y, y_hat = labels[key], predictions[key]
+            idx = [i for i in range(len(y)) if y[i] != -1]
             sub_y, sub_y_hat = [lab for i, lab in enumerate(y) if i in idx], \
                                [lab for i, lab in enumerate(y_hat) if i in idx]
             all_y.extend(sub_y); all_y_hat.extend(sub_y_hat)
             card = num_classes[key]
         for m in metrics:
             if m == 'accuracy':
-                stat[m] = accuracy_score(y, y_hat)
+                stat[m] = accuracy_score(sub_y, sub_y_hat)
             avg = 'binary' if card == 2 else 'macro'
             if m == 'precision':
-                stat[m] = precision_score(y, y_hat, average=avg)
+                stat[m] = precision_score(sub_y, sub_y_hat, average=avg)
             if m == 'recall':
-                stat[m] = recall_score(y, y_hat, average=avg)
+                stat[m] = recall_score(sub_y, sub_y_hat, average=avg)
             if m == 'f1':
-                stat[m] = f1_score(y, y_hat, average=avg)
+                stat[m] = f1_score(sub_y, sub_y_hat, average=avg)
             if m == 'kappa':
-                stat[m] = cohen_kappa_score(y, y_hat)
+                stat[m] = cohen_kappa_score(sub_y, sub_y_hat)
         stats.append(stat)
         return stats

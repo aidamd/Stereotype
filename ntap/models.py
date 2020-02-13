@@ -1,5 +1,5 @@
 from sklearn.svm import LinearSVC
-from sklearn.model_selection import StratifiedKFold, KFold
+from sklearn.model_selection import StratifiedKFold, KFold, train_test_split
 from sklearn.metrics import r2_score, cohen_kappa_score
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.linear_model import ElasticNet, LinearRegression
@@ -54,15 +54,15 @@ class Model(ABC):
             y = None
 
         results = list()
-        for i, (train_idx, test_idx) in enumerate(folder.split(X, y)):
+        for i, (train_val_idx, test_idx) in enumerate(folder.split(X, y)):
             print("Conducting Fold #", i + 1)
-            print(test_idx[0])
             #continue
             model_path = os.path.join(model_dir, str(i), "cv_model")
             self.cv_model_paths[i] = model_path
 
+            train_idx, val_idx = train_test_split(train_val_idx, test_size=0.1)
             self.train(data, num_epochs=num_epochs, train_indices=train_idx.tolist(),
-                    test_indices=test_idx.tolist(), model_path=model_path, batch_size=batch_size)
+                    test_indices=val_idx.tolist(), model_path=model_path, batch_size=batch_size)
             y, labels = self.predict(data, indices=test_idx.tolist(),
                     model_path=model_path, batch_size=batch_size)
             labels = dict()
