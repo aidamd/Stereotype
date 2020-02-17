@@ -124,26 +124,27 @@ def aggregate():
 def iat():
     df = pd.read_csv("Data/demo.csv")
     anno = json.load(open("annotators.json", "r"))
-    df = df.dropna(subset=["Username"])
+    df = df.dropna(subset=["Noor Username"])
     drop = list()
+    cols = ["Username", "Race", "Gender-Career", "Sexuality", "Religion",
+        "negative_belief", "offender_punishment", "deterrence", "victim_harm"]
     for i, row in df.iterrows():
         try:
-            df.at[i, "Username"] = anno[row["Username"]]
+            df.at[i, "Username"] = int(anno[row["Noor Username"]])
         except Exception:
             drop.append(i)
     df = df.drop(drop)
-    cols = ["Username", "Race", "Gender-Career", "Sexuality", "Religion",
-        "negative_belief", "offender_punishment", "deterrence", "victim_harm"]
+
     iat = pd.DataFrame()
     cols.remove("Username")
     for col in cols:
-        mean = (df[col].max + df[col].min()) / 2
+        mean = (df[col].max() + df[col].min()) / 2
         iat[col] = (df[col] - mean) / (df[col].max() - df[col].min())
     iat["Username"] = df["Username"]
     iat.to_csv("Data/demo_clean.csv", index=False)
 
 def annotattor_demo():
-    df = pd.read_csv("Data/Annotators_demo.csv")
+    df = pd.read_csv("Data/annotators_demo.csv")
     anno = {"Annotator ID": list(),
             "negative_belief": list(),
             "offender_punishment": list(),
@@ -154,7 +155,7 @@ def annotattor_demo():
     for i, row in df.iterrows():
         #if isinstance(row["Q17"], str):
         try:
-            if int(row["Q17"]) > 0:
+            if int(row["Q17"]) > 0 and int(row["Progress"]) == 100:
                 anno["Annotator ID"].append(int(row["Q17"]))
             else:
                 continue
@@ -210,10 +211,29 @@ def stereotype():
     json.dump(str_dict, open("Data/stereo.json", "w"), indent=4)
 
 
+def annotators_info():
+    annotattor_demo()
+    iat()
+    sub_posts()
+
+def sub_posts():
+    posts = pd.read_csv("Data/posts.csv")
+    annotators = list(pd.read_csv("Data/demo_clean.csv")["Username"])
+    annotators = [str(int(i)) for i in annotators]
+    annotators.append("text")
+    sub_posts = posts[annotators]
+    sub_posts = sub_posts.replace(2, -1)
+    annotators.remove("text")
+    drop = list()
+    for i, row in sub_posts.iterrows():
+        if sum(row[j] for j in annotators) == (-1) * len(annotators):
+            drop.append(i)
+    sub_posts = sub_posts.drop(drop)
+    sub_posts.to_csv("Data/sub_posts.csv", index=False)
+
 if __name__ == "__main__":
     #get_label("/home/aida/Data/Gab/full_disaggregated.json")
     #get_hate()
     #aggregate()
-    iat()
-    #annotattor_demo()
+    annotators_info()
     #stereotype()

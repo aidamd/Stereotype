@@ -45,8 +45,10 @@ class Model(ABC):
         X = np.zeros(data.num_sequences)  # arbitrary for Stratified KFold
         num_classes = len(data.targets)
         if num_classes == 1:  # LabelEncoder, not one-hot
-            folder = StratifiedKFold(n_splits=num_folds, shuffle=True,
-                                  random_state=self.random_state)
+            #folder = StratifiedKFold(n_splits=num_folds, shuffle=True,
+            #                      random_state=self.random_state)
+            folder = KFold(n_splits=num_folds, shuffle=True,
+                                     random_state=self.random_state)
             y = list(data.targets.values())[0]
         else:
             folder = KFold(n_splits=num_folds, shuffle=True,
@@ -160,8 +162,8 @@ class Model(ABC):
                 for i, feed in enumerate(data.batches(self.vars,
                     batch_size, test=False, keep_ratio=self.rnn_dropout,
                     idx=train_indices)):
-                    pred = self.sess.run([self.labels, self.logits],
-                                         feed_dict=feed)
+                    #pred = self.sess.run([self.labels, self.logits],
+                    #                     feed_dict=feed)
                     _, loss_val, acc = self.sess.run([self.vars["training_op"],
                         self.vars["joint_loss"], self.vars["joint_accuracy"]],
                                                      feed_dict=feed)

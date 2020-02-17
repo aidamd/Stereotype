@@ -219,9 +219,11 @@ class MultiModel(RNN):
                  weights=weight)
             self.vars["loss-{}".format(target)] = tf.reduce_mean(xentropy)
             self.vars["prediction-{}".format(target)] = tf.argmax(logits, 1)
+            self.prediction = tf.boolean_mask(self.vars["prediction-{}".format(target)],
+                                          self.vars["mask-{}".format(target)])
             self.vars["accuracy-{}".format(target)] = tf.reduce_mean(
-                tf.cast(tf.equal(self.vars["prediction-{}".format(target)],
-                                 self.vars["target-{}".format(target)]), tf.float32))
+                tf.cast(tf.equal(self.prediction,
+                                 self.labels), tf.float32))
         self.vars["joint_loss"] = \
             sum([self.vars[name] for name in self.vars if name.startswith("loss")])
 
@@ -259,17 +261,30 @@ class MultiModel(RNN):
                                [lab for i, lab in enumerate(y_hat) if i in idx]
             all_y.extend(sub_y); all_y_hat.extend(sub_y_hat)
             card = num_classes[key]
+            for m in metrics:
+                if m == 'accuracy':
+                    stat[m] = accuracy_score(sub_y, sub_y_hat)
+                avg = 'binary' if card == 2 else 'macro'
+                if m == 'precision':
+                    stat[m] = precision_score(sub_y, sub_y_hat, average=avg)
+                if m == 'recsub':
+                    stat[m] = recall_score(sub_y, sub_y_hat, average=avg)
+                if m == 'f1':
+                    stat[m] = f1_score(sub_y, sub_y_hat, average=avg)
+                if m == 'kappa':
+                    stat[m] = cohen_kappa_score(sub_y, sub_y_hat)
+
         for m in metrics:
             if m == 'accuracy':
-                stat[m] = accuracy_score(sub_y, sub_y_hat)
+                stat[m] = accuracy_score(all_y, all_y_hat)
             avg = 'binary' if card == 2 else 'macro'
             if m == 'precision':
-                stat[m] = precision_score(sub_y, sub_y_hat, average=avg)
+                stat[m] = precision_score(all_y, all_y_hat, average=avg)
             if m == 'recall':
-                stat[m] = recall_score(sub_y, sub_y_hat, average=avg)
+                stat[m] = recall_score(all_y, all_y_hat, average=avg)
             if m == 'f1':
-                stat[m] = f1_score(sub_y, sub_y_hat, average=avg)
+                stat[m] = f1_score(all_y, all_y_hat, average=avg)
             if m == 'kappa':
-                stat[m] = cohen_kappa_score(sub_y, sub_y_hat)
+                stat[m] = cohen_kappa_score(all_y, all_y_hat)
         stats.append(stat)
         return stats
