@@ -332,10 +332,11 @@ class Dataset:
                 else:
                     self.targets[c] = self.data[c].values
                     self.target_names[c] = list(set(self.data[c].values))
-                length = len(self.targets[c])
-                self.weights[c] = [(length - sum(self.targets[c] == name))/
-                                   length for name in self.target_names[c]]
-
+                length = len([x for x in self.targets[c] if x in [0,1]])
+                #self.weights[c] = [(length - sum(self.targets[c] == name))/
+                #                   length for name in [0, 1]]
+                self.weights[c] = [0.25, 0.75]
+                #print(self.weights[c])
     def encode_inputs(self, columns, var_type='categorical', normalize=None, encoding='one-hot'):
 
         if not isinstance(columns, list):

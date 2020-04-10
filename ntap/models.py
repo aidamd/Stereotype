@@ -45,10 +45,10 @@ class Model(ABC):
         X = np.zeros(data.num_sequences)  # arbitrary for Stratified KFold
         num_classes = len(data.targets)
         if num_classes == 1:  # LabelEncoder, not one-hot
-            #folder = StratifiedKFold(n_splits=num_folds, shuffle=True,
-            #                      random_state=self.random_state)
-            folder = KFold(n_splits=num_folds, shuffle=True,
-                                     random_state=self.random_state)
+            folder = StratifiedKFold(n_splits=num_folds, shuffle=True,
+                                  random_state=self.random_state)
+            #folder = KFold(n_splits=num_folds, shuffle=True,
+            #                         random_state=self.random_state)
             y = list(data.targets.values())[0]
         else:
             folder = KFold(n_splits=num_folds, shuffle=True,
@@ -62,7 +62,7 @@ class Model(ABC):
             model_path = os.path.join(model_dir, str(i), "cv_model")
             self.cv_model_paths[i] = model_path
 
-            train_idx, val_idx = train_test_split(train_val_idx, test_size=0.1)
+            train_idx, val_idx = train_test_split(train_val_idx, test_size=0.2)
             self.train(data, num_epochs=num_epochs, train_indices=train_idx.tolist(),
                     test_indices=val_idx.tolist(), model_path=model_path, batch_size=batch_size)
             y, labels = self.predict(data, indices=test_idx.tolist(),
@@ -162,20 +162,22 @@ class Model(ABC):
                 for i, feed in enumerate(data.batches(self.vars,
                     batch_size, test=False, keep_ratio=self.rnn_dropout,
                     idx=train_indices)):
-                    #pred = self.sess.run([self.labels, self.logits],
-                    #                     feed_dict=feed)
+                    pred = self.sess.run([self.vars["hidden-1"], self.vars["prediction-1"]],
+                                         feed_dict=feed)
                     _, loss_val, acc = self.sess.run([self.vars["training_op"],
                         self.vars["joint_loss"], self.vars["joint_accuracy"]],
                                                      feed_dict=feed)
                     epoch_loss += loss_val
-                    train_accuracy += acc
-                    num_batches += 1
+                    if not np.isnan(acc):
+                        train_accuracy += acc
+                        num_batches += 1
                 for i, feed in enumerate(data.batches(self.vars,
                     batch_size, test=False, keep_ratio=self.rnn_dropout,
                     idx=test_indices)):
                     acc = self.sess.run(self.vars["joint_accuracy"], feed_dict=feed)
-                    test_accuracy += acc
-                    test_batches += 1
+                    if not np.isnan(acc):
+                        test_accuracy += acc
+                        test_batches += 1
 
                 print("Epoch {}: Loss = {:.3}, Train Accuracy = {:.3}, Test Accuracy = {:.3}"
                       .format(epoch, epoch_loss/num_batches, train_accuracy/num_batches,
@@ -358,7 +360,7 @@ class RNN(Model):
                     dtype=tf.float32, sequence_length=sequences)
 
         if isinstance(self.rnn_pooling, int):
-            return self.__attention(hidden_states, self.rnn_pooling)
+            return self.__attention(hidden_states, self.rnn_pooling, self.hidden_size)
         elif self.rnn_pooling == 'last':  # default
             return state
         elif self.rnn_pooling == 'max':
@@ -366,15 +368,15 @@ class RNN(Model):
         elif self.rnn_pooling == 'mean':
             return tf.reduce_mean(hidden_states, axis=1)
 
-    def __attention(self, inputs, att_size):
-        hidden_size = inputs.shape[2].value
-        w_omega = tf.Variable(tf.random_normal([hidden_size, att_size],
+    def __attention(self, inputs, att_size, input_size):
+        #hidden_size = inputs.shape[1].value
+        w_omega = tf.Variable(tf.random_normal(shape=[input_size, att_size],
             stddev=0.1))
-        b_omega = tf.Variable(tf.random_normal([att_size], stddev=0.1))
-        u_omega = tf.Variable(tf.random_normal([att_size], stddev=0.1))
+        b_omega = tf.Variable(tf.random_normal(shape=[att_size], stddev=0.1))
+        u_omega = tf.Variable(tf.random_normal(shape=[att_size], stddev=0.1))
 
         with tf.name_scope('v'):
-            v = tf.tanh(tf.tensordot(inputs, w_omega, axes=1) + b_omega)
+            v = tf.tanh(tf.matmul(inputs, w_omega) + b_omega)
         vu = tf.tensordot(v, u_omega, axes=1, name='vu')
         alphas = tf.nn.softmax(vu, name='alphas')
         output = tf.reduce_sum(inputs * tf.expand_dims(alphas, -1), 1)

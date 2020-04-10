@@ -6,11 +6,15 @@ from data import *
 import argparse
 
 def initialize_dataset(mode):
-    if mode == "demo":
-        data_path = "Data/sub_annotations.csv"
-    else:
-        data_path = "Data/sub_posts.csv"
-    data = DemoData(data_path,
+    #if mode == "demo":
+    #    data_path = "Data/sub_annotations.csv"
+    #else:
+    data_path = "Data/sub_posts-17.csv"
+    data = DemoData(data_path, demo_cols = [#"Race", "Gender-Career", "Sexuality", "Religion",
+                                            #"negative_belief", "offender_punishment",
+                                            #"deterrence", "victim_harm", 
+                                            "political_view"
+                                            ],
                     demo_path="Data/demo_clean.csv" if mode == "demo" else None)
 
     data.set_params(vocab_size=10000,
@@ -20,22 +24,22 @@ def initialize_dataset(mode):
     return data
 
 def initialize_model(data, mode):
-    if mode == "demo":
-        model = AnnotatorDemo("hate ~ seq(text)",
-                          rnn_dropout=0.5, hidden_size=50, cell="biGRU",
+    #if mode == "demo":
+    #    model = AnnotatorDemo("hate ~ seq(text)",
+    #                      rnn_dropout=0.5, hidden_size=50, cell="biGRU",
+    #                      embedding_source="glove", data=data, optimizer='adam',
+    #                      learning_rate=0.001)
+    #else:
+    dv = "+".join([str(col) for col in data.annotators])
+    model = MultiModel(dv + " ~ seq(text)",
+                          rnn_dropout=0.5, hidden_size=64, cell="biGRU",
                           embedding_source="glove", data=data, optimizer='adam',
-                          learning_rate=0.0005)
-    else:
-        dv = "+".join([str(col) for col in data.annotators])
-        model = MultiModel(dv + " ~ seq(text)",
-                          rnn_dropout=0.5, hidden_size=32, cell="biGRU",
-                          embedding_source="glove", data=data, optimizer='adam',
-                          learning_rate=0.0005)
+                          learning_rate=0.0002)
     return model
 
 
 def train_model(model, data):
-    result = model.CV(data, num_epochs=10, num_folds=10, batch_size=512)
+    result = model.CV(data, num_epochs=7, num_folds=20, batch_size=256)
     result.summary()
 
 if __name__== '__main__':

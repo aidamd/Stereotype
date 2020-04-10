@@ -100,7 +100,7 @@ def aggregate():
                 anno_df[i].append(val[annotator])
                 hate[val[annotator]] += 1
             else:
-                anno_df[i].append(2)
+                anno_df[i].append(-1)
         anno_df["hate"].append(1 if hate[1] > hate[0] else 0)
         agree = max(hate[0] / (hate[0] + hate[1]),
                     hate[1] / (hate[0] + hate[1]))
@@ -127,7 +127,8 @@ def iat():
     df = df.dropna(subset=["Noor Username"])
     drop = list()
     cols = ["Username", "Race", "Gender-Career", "Sexuality", "Religion",
-        "negative_belief", "offender_punishment", "deterrence", "victim_harm"]
+            "negative_belief", "offender_punishment", "deterrence", "victim_harm",
+            "political_view"]
     for i, row in df.iterrows():
         try:
             df.at[i, "Username"] = int(anno[row["Noor Username"]])

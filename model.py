@@ -123,7 +123,7 @@ class AnnotatorDemo(RNN):
 
         
         self.vars["hidden_demo"] = tf.concat([self.vars["hidden_states"],
-                                            tf.layers.dense(self.vars["Demo_Embedding"], 64)], axis=-1)
+                                            self.vars["Demo_Embedding"]], axis=-1)
 
         for target in data.targets:
             n_outputs = 2
@@ -147,14 +147,17 @@ class MultiModel(RNN):
 
     def build(self, data):
         tf.reset_default_graph()
+        self.demo_size = 64
+        n_outputs = 2
         self.vars["sequence_length"] = tf.placeholder(tf.int32, shape=[None],
                 name="SequenceLength")
         self.vars["word_inputs"] = tf.placeholder(tf.int32, shape=[None, None],
                                                   name="RNNInput")
         self.vars["keep_ratio"] = tf.placeholder(tf.float32, name="KeepRatio")
-        W = tf.Variable(tf.constant(0.0, shape=[len(data.vocab), data.embed_dim]), trainable=False, name="Embed")
-        self.vars["Embedding"] = tf.layers.dropout(tf.nn.embedding_lookup(W,
-                self.vars["word_inputs"]), rate=self.vars["keep_ratio"], name="EmbDropout")
+        W = tf.Variable(tf.constant(0.0, shape=[len(data.vocab), data.embed_dim]),
+                        trainable=False, name="Embed")
+        self.vars["Embedding"] = tf.nn.embedding_lookup(W,
+                self.vars["word_inputs"])
         self.vars["EmbeddingPlaceholder"] = tf.placeholder(tf.float32,
                 shape=[len(data.vocab), data.embed_dim])
         self.vars["EmbeddingInit"] = W.assign(self.vars["EmbeddingPlaceholder"])
@@ -174,25 +177,29 @@ class MultiModel(RNN):
             self.vars["DemoEmbeddingPlaceholder"] = \
                 tf.placeholder(tf.float32, shape=[max(data.annotators) + 1, data.demo_dim],
                                name="DemoEmbedding")
+            We = tf.Variable(tf.random_uniform(shape=
+                [2 * self.hidden_size + self.demo_size, n_outputs]))
+            b = tf.Variable(tf.zeros([n_outputs]))
 
         for target in data.targets:
-            n_outputs = 2
             if data.demo is not None:
-                self.anno_id = tf.tile(tf.convert_to_tensor([int(target)]),
-                                  [tf.shape(self.vars["hidden_states"])[0]])
+                self.anno_demo = tf.nn.embedding_lookup(
+                    self.vars["DemoEmbeddingPlaceholder"],
+                    tf.convert_to_tensor([int(target)]))
 
-                self.vars["annotator-demo"] = \
-                    tf.nn.embedding_lookup(self.vars["DemoEmbeddingPlaceholder"],
-                                           self.anno_id)
+                self.vars["annotator-demo"] = tf.tile(
+                    tf.layers.dense(self.anno_demo, self.demo_size, activation=tf.nn.relu),
+                    [tf.shape(self.vars["hidden_states"])[0], 1])
 
                 self.vars["hidden-{}".format(target)] = \
-                    tf.layers.dropout(tf.concat([self.vars["hidden_states"],
-                                                 tf.layers.dense(
-                                                     self.vars["annotator-demo"],
-                                                     64)], axis=-1),
-                                      rate = self.vars["keep_ratio"])
+                    tf.concat([self.vars["hidden_states"],
+                               self.vars["annotator-demo"]], axis=-1)
+                logits = tf.matmul(self.vars["hidden-{}".format(target)], We) + b
+                #logits = tf.layers.dense(self.vars["hidden-{}".format(target)], n_outputs)
+
             else:
                 self.vars["hidden-{}".format(target)] = self.vars["hidden_states"]
+                logits = tf.layers.dense(self.vars["hidden-{}".format(target)], n_outputs)
 
             self.vars["target-{}".format(target)] = \
                 tf.placeholder(tf.int64, shape=[None],
@@ -206,7 +213,6 @@ class MultiModel(RNN):
                 tf.placeholder(tf.bool, shape=[None],
                                name="mask-{}".format(target))
 
-            logits = tf.layers.dense(self.vars["hidden_states"], n_outputs)
             self.labels = tf.boolean_mask(self.vars["target-{}".format(target)],
                                          self.vars["mask-{}".format(target)])
             weight = tf.gather(self.vars["weights-{}".format(target)],
@@ -267,13 +273,14 @@ class MultiModel(RNN):
                 avg = 'binary' if card == 2 else 'macro'
                 if m == 'precision':
                     stat[m] = precision_score(sub_y, sub_y_hat, average=avg)
-                if m == 'recsub':
+                if m == 'recall':
                     stat[m] = recall_score(sub_y, sub_y_hat, average=avg)
                 if m == 'f1':
                     stat[m] = f1_score(sub_y, sub_y_hat, average=avg)
                 if m == 'kappa':
                     stat[m] = cohen_kappa_score(sub_y, sub_y_hat)
-
+            stats.append(stat)
+        stat = {"Target": "all"}
         for m in metrics:
             if m == 'accuracy':
                 stat[m] = accuracy_score(all_y, all_y_hat)

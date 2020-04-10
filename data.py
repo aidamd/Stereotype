@@ -3,7 +3,7 @@ import collections
 import random
 
 class DemoData(Dataset):
-    def __init__(self, source, demo_path=None, glove_path=None, mallet_path=None, tokenizer='wordpunct', vocab_size=5000,
+    def __init__(self, source, demo_cols = None, demo_path=None, glove_path=None, mallet_path=None, tokenizer='wordpunct', vocab_size=5000,
             embed='glove', min_token=5, stopwords=None, stem=False,
             lower=True, max_len=512, include_nums=False,
             include_symbols=False, num_topics=100, lda_max_iter=500):
@@ -21,16 +21,16 @@ class DemoData(Dataset):
             self.annotators = sorted([int(x) for x in columns])
 
         if demo_path:
-            self.__read_demo(demo_path)
+            self.__read_demo(demo_path, demo_cols)
         else:
             self.demo = None
         #self.data = self.data[self.data["username"].isin(self.annotators)]
 
 
-    def __read_demo(self, demo_path):
+    def __read_demo(self, demo_path, cols):
         demo_df = pd.read_csv(demo_path)
-        cols = list(demo_df.columns)
-        cols.remove("Username")
+        #cols = list(demo_df.columns)
+        #cols.remove("Username")
         self.demo = {anno: 0 for anno in self.annotators}
         self.demo_dim = len(cols)
 
@@ -81,13 +81,14 @@ class DemoData(Dataset):
                     mask[mask == -1] = False
                     feed_dict[var_dict[var_name]] = mask
                 if test:
-                    feed_dict[var_dict['keep_ratio']] = 0.0
+                    feed_dict[var_dict['keep_ratio']] = 0
                     continue  # no labels or loss weights
                 if var_name.startswith("weights"):
                     name = var_name.replace("weights-", "")
                     if name not in self.weights:
                         raise ValueError("Weights not found in data")
-                    feed_dict[var_dict[var_name]] = np.array(self.weights[name][:-1])
+                    feed_dict[var_dict[var_name]] = np.array(self.weights[name])
+
                 if var_name == 'keep_ratio':
                     if keep_ratio is None:
                         raise ValueError("Keep Ratio for RNN Dropout not set")
@@ -166,13 +167,15 @@ class MultiData(Dataset):
                         raise ValueError("Target not in data: {}".format(name))
                     feed_dict[var_dict[var_name]] = self.targets[name][idx[s:e]]
                 if test:
-                    feed_dict[var_dict['keep_ratio']] = 0.0
+                    feed_dict[var_dict['keep_ratio']] = 1.0
                     continue  # no labels or loss weights
                 if var_name.startswith("weights"):
                     name = var_name.replace("weights-", "")
                     if name not in self.weights:
                         raise ValueError("Weights not found in data")
                     feed_dict[var_dict[var_name]] = np.array(self.weights[name])
+                    print(np.array(self.weights[name]))
+                    exit(1)
                 if var_name == 'keep_ratio':
                     if keep_ratio is None:
                         raise ValueError("Keep Ratio for RNN Dropout not set")
